@@ -11,7 +11,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 
 import com.dlutskov.chart_lib.ChartBounds;
-import com.dlutskov.chart_lib.ChartUtils;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;

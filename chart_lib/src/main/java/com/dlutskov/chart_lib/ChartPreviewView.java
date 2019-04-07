@@ -10,6 +10,7 @@ import android.view.ViewConfiguration;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 
 /**
  * Extends {@link ChartView} and allow to select some area on the chart

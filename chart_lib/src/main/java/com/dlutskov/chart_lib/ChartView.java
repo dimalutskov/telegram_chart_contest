@@ -11,6 +11,7 @@ import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartDataDrawer;
 import com.dlutskov.chart_lib.drawers.ChartLinesDrawer;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,7 +62,8 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
      */
     protected Rect mDrawingRect = new Rect();
 
-    // TODO
+    // By default each time when bounds or data changed - min/max Y values will be recalculated depends on
+    // the visible data on the chart. Values below used to force use specified min max values not depend on the chart's data
     private Y mMinYValue;
     private Y mMaxYValue;
 

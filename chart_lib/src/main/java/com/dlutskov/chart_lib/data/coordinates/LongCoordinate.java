@@ -15,14 +15,19 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
         sNameFormatSuffixes.put(1_000_000L, "M");
     }
 
-    final Long mValue;
+    Long mValue;
     String mAxisName;
     String mFullName;
 
     LongCoordinate(long value) {
+        setInternal(value);
+    }
+
+    private LongCoordinate setInternal(long value) {
         mValue = value;
         mAxisName = formatName(value);
         mFullName = String.valueOf(value);
+        return this;
     }
 
     @Override
@@ -41,13 +46,33 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
     }
 
     @Override
+    public LongCoordinate add(LongCoordinate coordinate, LongCoordinate result) {
+        return result.setInternal(coordinate.mValue + mValue);
+    }
+
+    @Override
     public LongCoordinate distanceTo(LongCoordinate coordinate) {
         return LongCoordinate.valueOf(coordinate.mValue - mValue);
     }
 
     @Override
+    public LongCoordinate distanceTo(LongCoordinate coordinate, LongCoordinate result) {
+        return result.setInternal(coordinate.mValue - mValue);
+    }
+
+    @Override
     public LongCoordinate getPart(float ratio) {
         return LongCoordinate.valueOf((long) (mValue * ratio)) ;
+    }
+
+    @Override
+    public LongCoordinate getPart(float ratio, LongCoordinate result) {
+        return result.setInternal((long) (mValue * ratio));
+    }
+
+    @Override
+    public LongCoordinate set(LongCoordinate coordinate) {
+        return setInternal(coordinate.mValue);
     }
 
     @Override

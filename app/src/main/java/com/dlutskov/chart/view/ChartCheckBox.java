@@ -11,7 +11,7 @@ import android.graphics.RectF;
 import android.widget.Checkable;
 import android.widget.TextView;
 
-import com.dlutskov.chart_lib.ChartUtils;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 
 /**
  * Custom checkbox with own checked/unchecked animation

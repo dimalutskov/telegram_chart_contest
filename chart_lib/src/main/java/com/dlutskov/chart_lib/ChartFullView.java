@@ -9,6 +9,7 @@ import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPointsDetailsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartXAxisLabelsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 
 /**
  * Extends {@link ChartView} by adding own {@link ChartXAxisLabelsDrawer} and {@link ChartYAxisLabelsDrawer}

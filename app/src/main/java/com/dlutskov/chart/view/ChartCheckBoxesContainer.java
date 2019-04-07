@@ -7,7 +7,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.dlutskov.chart_lib.ChartUtils;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;

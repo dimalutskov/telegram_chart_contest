@@ -15,21 +15,54 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
     float calcCoordinateRatio(T min, T max);
 
     /**
-     * @return Sum of current coordinate and @param coordinate
+     * @return Sum of current coordinate and @param coordinate as a new instance
      */
     T add(T coordinate);
 
     /**
-     * @return Subtraction of current coordinate from @param coordinate
+     * @return The same as in {@link #add(ChartCoordinate)} but result will be written to "result" param.
+     * Override it for your coordinate to not create new instance each time calling this method
+     */
+    default T add(T coordinate, T result) {
+        result.set(add(coordinate));
+        return result;
+    }
+
+    /**
+     * @return Subtraction of current coordinate from @param coordinate as a new instance
      */
     T distanceTo(T coordinate);
 
     /**
-     * Returns coordinate as a part of current coordinate
+     * @return The same as in {@link #distanceTo(ChartCoordinate)} but result will be written to "result" param.
+     * Override it for your coordinate to not create new instance each time calling this method
+     */
+    default T distanceTo(T coordinate, T result) {
+        result.set(distanceTo(coordinate));
+        return result;
+    }
+
+    /**
+     * Returns coordinate as first part of current coordinate as first new instance
      * @param ratio Value from 0 to 1 (0 - 0, 1 - current coordinate)
      * @return Coordinate and ratio multiplication (current coordinate * ratio)
      */
     T getPart(float ratio);
+
+    /**
+     * @return The same as in {@link #getPart(float)} but result will be written to "result" param.
+     * Override it for your coordinate to not create new instance each time calling this method
+     */
+    default T getPart(float ratio, T result) {
+        result.set(getPart(ratio));
+        return result;
+    }
+
+    /**
+     * Sets internal coordinate value.
+     * Used to keep and update single object for calculations and not create new one
+     */
+    T set(T coordinate);
 
     /**
      * @return Name which will be displayed as the axis label

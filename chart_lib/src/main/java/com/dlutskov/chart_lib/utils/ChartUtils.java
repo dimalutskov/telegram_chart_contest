@@ -1,9 +1,10 @@
-package com.dlutskov.chart_lib;
+package com.dlutskov.chart_lib.utils;
 
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.TypedValue;
 
+import com.dlutskov.chart_lib.ChartBounds;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 
 public class ChartUtils {

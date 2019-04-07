@@ -3,7 +3,7 @@ package com.dlutskov.chart_lib.drawers;
 import android.graphics.Color;
 import android.graphics.Paint;
 
-import com.dlutskov.chart_lib.ChartUtils;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 

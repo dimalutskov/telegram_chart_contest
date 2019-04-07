@@ -16,7 +16,7 @@ import com.dlutskov.chart.view.ChartTabsView;
 import com.dlutskov.chart.view.MoonIconView;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
-import com.dlutskov.chart_lib.ChartUtils;
+import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
@@ -164,7 +164,6 @@ public class MainActivity extends Activity implements
         params.rightMargin = margin;
         view.setLayoutParams(params);
         // Styling
-        view.setMinYValue(LongCoordinate.valueOf(0));
         view.setLabelsTextSize(ChartUtils.getPixelForDp(ctx, 12));
         return view;
     }
@@ -176,8 +175,6 @@ public class MainActivity extends Activity implements
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
         params.setMargins(margin, margin, margin, margin);
         view.setLayoutParams(params);
-        // Styling
-        view.setMinYValue(LongCoordinate.valueOf(0));
         return view;
     }
 

@@ -35,12 +35,18 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
 
     private final Listener mListener;
 
+    // Buffer values which used for calculations to not create new instances each time
+    private Y minBuf;
+    private Y maxBuf;
+
     BoundsUpdateAnimator(ChartBounds<X, Y> initialBounds, ChartBounds<X, Y> targetBounds,
                          Listener<X, Y> listener) {
         mCurrentBounds = initialBounds;
         mInitialYBounds = new Pair<>(initialBounds.getMinY(), initialBounds.getMaxY());
         mTargetYBounds = new Pair<>(targetBounds.getMinY(), targetBounds.getMaxY());
         mListener = listener;
+        minBuf = (Y) initialBounds.getMinY().clone();
+        maxBuf = (Y) initialBounds.getMaxY().clone();
     }
 
     void start(long duration, Animator.AnimatorListener animatorListener) {
@@ -85,11 +91,16 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
     public void onAnimationUpdate(ValueAnimator animation) {
         float progress = (float) animation.getAnimatedValue();
 
-        Y newMinY = (Y) mInitialYBounds.first.add(mInitialYBounds.first.distanceTo(mTargetYBounds.first).getPart(progress));
-        Y newMaxY = (Y) mInitialYBounds.second.add(mInitialYBounds.second.distanceTo(mTargetYBounds.second).getPart(progress));
+        minBuf = (Y) mInitialYBounds.first.distanceTo(mTargetYBounds.first);
+        minBuf = (Y) minBuf.getPart(progress);
+        minBuf.set(mInitialYBounds.first.add(minBuf, minBuf));
 
-        mCurrentBounds.setMinY(newMinY);
-        mCurrentBounds.setMaxY(newMaxY);
+        maxBuf = (Y) mInitialYBounds.second.distanceTo(mTargetYBounds.second);
+        maxBuf = (Y) maxBuf.getPart(progress);
+        maxBuf.set(mInitialYBounds.second.add(maxBuf, maxBuf));
+
+        mCurrentBounds.setMinY(minBuf);
+        mCurrentBounds.setMaxY(maxBuf);
 
         mListener.onBoundsUpdated(mCurrentBounds, progress);
     }
