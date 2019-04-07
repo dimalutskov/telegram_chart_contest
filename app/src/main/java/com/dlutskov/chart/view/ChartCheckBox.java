@@ -159,7 +159,6 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
     @Override
     public void onAnimationUpdate(ValueAnimator animation) {
         mAnimationProgress = (float) animation.getAnimatedValue();
-        System.out.println("@@@ ChartCheckBox.onAnimationUpdate " + mAnimationProgress);
         invalidate();
     }
 }

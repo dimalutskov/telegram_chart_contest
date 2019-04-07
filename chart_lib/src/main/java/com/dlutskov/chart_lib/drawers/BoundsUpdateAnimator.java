@@ -91,13 +91,13 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
     public void onAnimationUpdate(ValueAnimator animation) {
         float progress = (float) animation.getAnimatedValue();
 
-        minBuf = (Y) mInitialYBounds.first.distanceTo(mTargetYBounds.first);
-        minBuf = (Y) minBuf.getPart(progress);
-        minBuf.set(mInitialYBounds.first.add(minBuf, minBuf));
+        mInitialYBounds.first.distanceTo(mTargetYBounds.first, minBuf);
+        minBuf.getPart(progress, minBuf);
+        mInitialYBounds.first.add(minBuf, minBuf);
 
-        maxBuf = (Y) mInitialYBounds.second.distanceTo(mTargetYBounds.second);
-        maxBuf = (Y) maxBuf.getPart(progress);
-        maxBuf.set(mInitialYBounds.second.add(maxBuf, maxBuf));
+        mInitialYBounds.second.distanceTo(mTargetYBounds.second, maxBuf);
+        maxBuf.getPart(progress, maxBuf);
+        mInitialYBounds.second.add(maxBuf, maxBuf);
 
         mCurrentBounds.setMinY(minBuf);
         mCurrentBounds.setMaxY(maxBuf);
