@@ -170,7 +170,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void onBoundsUpdated(ChartBounds bounds, float updateProgress) {
+    public void onBoundsAnimationUpdated(ChartBounds bounds, float updateProgress) {
         super.updateBounds(bounds, bounds);
         mCurrentLabelsAlpha = (int) (200 * (1 - updateProgress));
 

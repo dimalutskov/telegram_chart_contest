@@ -24,7 +24,7 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
          * @param bounds - newly updated bounds
          * @param updateProgress - animator update progress (value from 0 to 1)
          */
-        void onBoundsUpdated(ChartBounds<X, Y> bounds, float updateProgress);
+        void onBoundsAnimationUpdated(ChartBounds<X, Y> bounds, float updateProgress);
     }
 
     private final ChartBounds<X, Y> mCurrentBounds;
@@ -102,7 +102,7 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
         mCurrentBounds.setMinY(minBuf);
         mCurrentBounds.setMaxY(maxBuf);
 
-        mListener.onBoundsUpdated(mCurrentBounds, progress);
+        mListener.onBoundsAnimationUpdated(mCurrentBounds, progress);
     }
 
 }
