@@ -68,7 +68,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         float x = ev.getX();
         if (x < mDrawingRect.left || x > mDrawingRect.right) {
-            mShowPointsDetailsOnTouch = false;
             return true;
         }
 

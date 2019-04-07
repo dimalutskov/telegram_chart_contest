@@ -18,7 +18,7 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 /**
  * Contains ChartCheckBox views related to collection of ChartPointsData
  */
-public class ChartCheckBoxesContainer extends LinearLayout implements View.OnClickListener {
+public class ChartCheckBoxesContainer extends LinearLayout implements View.OnClickListener, View.OnLongClickListener {
 
     /**
      * Used to notify about ChartPointsData's related checkbox state changed
@@ -29,6 +29,7 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
          * @param checked - New checkbox state
          */
         void onChartLineCheckBoxStateChanged(String id, boolean checked);
+
     }
 
     private Listener mListener;
@@ -57,6 +58,7 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
             toggleView.setTag(lineData);
             toggleView.setChecked(true);
             toggleView.setOnClickListener(this);
+            toggleView.setOnLongClickListener(this);
             addView(toggleView);
         }
     }
@@ -69,6 +71,20 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
             ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
             mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checkBox.isChecked());
         }
+    }
+
+    @Override
+    public boolean onLongClick(View v) {
+        for (int i = 0; i < getChildCount(); i++) {
+            ChartCheckBox checkBox = (ChartCheckBox) getChildAt(i);
+            boolean checked = checkBox == v;
+            if (mListener != null && checked != checkBox.isChecked()) {
+                ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
+                mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checked);
+            }
+            checkBox.setChecked(checked);
+        }
+        return true;
     }
 
     public void setTextColor(int textColor) {
