@@ -27,6 +27,8 @@ import java.util.Set;
  */
 public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartDataDrawer<X, Y> implements ValueAnimator.AnimatorUpdateListener {
 
+    public static final long DISAPPEARING_DELAY = 3000;
+
     private final Paint mDividerPaint;
     private final Paint mBackgroundBorderPaint;
     private final Paint mBackgroundPaint;
@@ -85,6 +87,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private boolean isShown;
 
+    private Runnable mHideTask = () -> startAnimator(false);
+
     public ChartPointsDetailsDrawer(ChartView<X, Y> chartView) {
         super(chartView);
 
@@ -134,6 +138,12 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     @Override
+    public void updateBounds(ChartBounds<X, Y> oldBounds, ChartBounds<X, Y> newBounds) {
+        super.updateBounds(oldBounds, newBounds);
+        isShown = false;
+    }
+
+    @Override
     public void updatePointsVisibility(String pointsId, boolean visible) {
         super.updatePointsVisibility(pointsId, visible);
         if (visible) {
@@ -141,6 +151,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         } else {
             mHiddenChartLines.add(pointsId);
         }
+        isShown = false;
     }
 
     @Override
@@ -238,18 +249,27 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     public void showPointDetails(int xPointIndex) {
-        if (mSelectedPointPosition != xPointIndex) {
-            mSelectedPointPosition = xPointIndex;
-            if (isShown) {
-                mChartView.invalidate();
-            } else {
-                startAnimator(true);
-            }
+        mChartView.removeCallbacks(mHideTask);
+
+        mSelectedPointPosition = xPointIndex;
+        if (isShown) {
+            mChartView.invalidate();
+        } else {
+            startAnimator(true);
         }
     }
 
-    public void hidePointDetails() {
-        startAnimator(false);
+    public void hidePointDetails(long delay) {
+        mChartView.removeCallbacks(mHideTask);
+        mChartView.postDelayed(mHideTask, delay);
+    }
+
+    public boolean isShown() {
+        return isShown;
+    }
+
+    public boolean isTouchInside(float x, float y) {
+        return x >= mViewRect.left && x <= mViewRect.right && y >= mViewRect.top && y <= mViewRect.bottom;
     }
 
     private void startAnimator(boolean appear) {

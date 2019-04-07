@@ -2,6 +2,7 @@ package com.dlutskov.chart_lib;
 
 import android.content.Context;
 import android.graphics.Rect;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
@@ -24,6 +25,11 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     private ChartXAxisLabelsDrawer<X, Y> mXAxisLabelsDrawer;
     private ChartYAxisLabelsDrawer<X, Y> mYAxisLabelsDrawer;
     private ChartPointsDetailsDrawer<X, Y> mPointsDetailsDrawer;
+
+    private GestureDetector mGestureDetector = new GestureDetector(new GestureDetectorListener());
+
+    private boolean mShowPointsDetailsOnTouch = true;
+    private boolean mDetectClickOnPointsDetails;
 
     public ChartFullView(Context context) {
         super(context);
@@ -54,29 +60,44 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         if (!mYAxisLabelsDrawer.isDrawOverPoints() && yLabelsWidth > 0) {
             rect.left += yLabelsWidth;
         }
-
-//        mXLabelsDrawingRect.set(rect.left, xLabelsHeight > 0 ? bottom - xLabelsHeight : bottom, rect.right, bottom);
-//        mYLabelsDrawingRect.set(left, rect.top, yLabelsWidth > 0 ? left + yLabelsWidth : rect.right, rect.bottom);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        mGestureDetector.onTouchEvent(ev);
+
         float x = ev.getX();
         if (x < mDrawingRect.left || x > mDrawingRect.right) {
-            // Hide points details if touch was outside chart
-            mPointsDetailsDrawer.hidePointDetails();
-            return super.onTouchEvent(ev);
+            mShowPointsDetailsOnTouch = false;
+            return true;
+        }
+
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            if (mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(ev.getX(), ev.getY())) {
+                // Skip clicks on the details window - it'll be handled by gesture listener
+                mDetectClickOnPointsDetails = true;
+                mShowPointsDetailsOnTouch = false;
+                return true;
+            } else {
+                mDetectClickOnPointsDetails = false;
+            }
         }
 
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
-                int xIndex = mBounds.getMinXIndex() + Math.round((x / mDrawingRect.width()) * mBounds.getXPointsCount());
-                mPointsDetailsDrawer.showPointDetails(xIndex);
+                if (mShowPointsDetailsOnTouch) {
+                    int xIndex = mBounds.getMinXIndex() + Math.round((x / mDrawingRect.width()) * mBounds.getXPointsCount());
+                    mPointsDetailsDrawer.showPointDetails(xIndex);
+                }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                mPointsDetailsDrawer.hidePointDetails();
+                if (mPointsDetailsDrawer.isShown()) {
+                    mPointsDetailsDrawer.hidePointDetails(ChartPointsDetailsDrawer.DISAPPEARING_DELAY);
+                }
+                mShowPointsDetailsOnTouch = true;
+                break;
         }
         return true;
     }
@@ -124,5 +145,16 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         mXAxisLabelsDrawer.setTextColor(textColor);
         mYAxisLabelsDrawer.setTextColor(textColor);
         invalidate();
+    }
+
+    class GestureDetectorListener extends GestureDetector.SimpleOnGestureListener {
+
+        @Override
+        public boolean onSingleTapConfirmed(MotionEvent e) {
+            if (mDetectClickOnPointsDetails && mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(e.getX(), e.getY())) {
+                mPointsDetailsDrawer.hidePointDetails(0);
+            }
+            return super.onSingleTapConfirmed(e);
+        }
     }
 }

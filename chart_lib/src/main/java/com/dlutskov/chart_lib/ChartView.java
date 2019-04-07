@@ -88,7 +88,6 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
 
     public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex) {
         updateChartDataInternal(chartData, minXIndex, maxXindex);
-
     }
 
     private void updateChartDataInternal(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex) {
