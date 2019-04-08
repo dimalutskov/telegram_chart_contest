@@ -24,6 +24,9 @@ import java.util.List;
 public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartAxisLabelsDrawer<X, Y>
         implements BoundsUpdateAnimator.Listener<X, Y> {
 
+    public static final int SIDE_LEFT = -1;
+    public static final int SIDE_RIGHT = 1;
+
     // Labels which reflects current chart's bounds
     private List<DrawnLabel<Y>> mCurrentLabels = new ArrayList<>();
 
@@ -40,6 +43,9 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     private Paint mGridPaint;
     // Padding between divider and label
     private int mGridPadding;
+
+    // Side where the labels will be drawn (-1 - left side, 1 - right side)
+    private int mSide = SIDE_LEFT;
 
     // Reflects whether need to rebuild target bounds on next rebuild callback
     private boolean rebuildTargetBounds;
@@ -106,6 +112,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         } else {
             for (int i = 0; i < mCurrentLabels.size(); i++) {
                 DrawnLabel<Y> label = mCurrentLabels.get(i);
+                label.x = getLabelXCoordinate(label, drawingRect);
                 label.y = ChartUtils.calcYCoordinate(bounds, drawingRect, label.value);
             }
         }
@@ -117,6 +124,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             } else {
                 for (int i = 0; i < mTargetLabels.size(); i++) {
                     DrawnLabel<Y> label = mTargetLabels.get(i);
+                    label.x = getLabelXCoordinate(label, drawingRect);
                     label.y = ChartUtils.calcYCoordinate(bounds, drawingRect, label.value);
                 }
             }
@@ -134,6 +142,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         for (int i = 0; i <= mLabelsCount; i++) {
             String label = currentValue.getAxisName();
             DrawnLabel<Y> drawnLabel = new DrawnLabel(currentValue, label);
+            drawnLabel.x = getLabelXCoordinate(drawnLabel, drawingRect);
             drawnLabel.y = ChartUtils.calcYCoordinate(bounds, drawingRect, currentValue);
             labels.add(drawnLabel);
             currentValue = (Y) currentValue.add(step);
@@ -160,12 +169,12 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         // Draws current labels text
         for (DrawnLabel label : mCurrentLabels) {
             mLabelPaint.setAlpha(mCurrentLabelsAlpha);
-            canvas.drawText(label.text, drawingRect.left, label.y - mGridPadding, mLabelPaint);
+            canvas.drawText(label.text, label.x, label.y - mGridPadding, mLabelPaint);
         }
         // Draws targeting labels text
         for (DrawnLabel label : mTargetLabels) {
             mLabelPaint.setAlpha(255 - mCurrentLabelsAlpha);
-            canvas.drawText(label.text, drawingRect.left, label.y - mGridPadding, mLabelPaint);
+            canvas.drawText(label.text, label.x, label.y - mGridPadding, mLabelPaint);
         }
     }
 
@@ -197,11 +206,24 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         mChartView.invalidate();
     }
 
+    public void setSide(int side) {
+        mSide = side;
+    }
+
+    private float getLabelXCoordinate(DrawnLabel label, Rect drawingRect) {
+        if (mSide == SIDE_RIGHT) {
+            return drawingRect.right - mLabelPaint.measureText(label.text);
+        } else {
+            return drawingRect.left;
+        }
+    }
+
     // Contains data about axis label which is drawn on the canvas
     private static class DrawnLabel<C extends ChartCoordinate> {
         final C value;
         final String text;
         float y;
+        float x;
         DrawnLabel(C value, String text) {
             this.text = text;
             this.value = value;
