@@ -3,16 +3,15 @@ package com.dlutskov.chart_lib;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
-import android.util.Pair;
 import android.widget.FrameLayout;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
-import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
-import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartDataDrawer;
+import com.dlutskov.chart_lib.drawers.ChartLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.utils.ChartUtils;
+import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -68,6 +67,9 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     private Y mMinYValue;
     private Y mMaxYValue;
 
+    // Used to calculate minY and maxY to not create new instance on each calculations
+    private Pair<Y, Y> mYBoundsPair = new Pair<>(null, null);
+
     public ChartView(Context context) {
         super(context);
         init();
@@ -75,7 +77,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
 
     protected void init() {
         mBounds = new ChartBounds<>(0, 0, null, null);
-        mPointsDrawer = new ChartBarsDrawer<>(this);
+        mPointsDrawer = new ChartLinesDrawer<>(this);
         // Set small top padding by default to have some space above the highest point
         int topPadding = ChartUtils.getPixelForDp(getContext(), 6);
         setPadding(0, topPadding, 0, 0);
@@ -163,21 +165,14 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     private void calculateCurrentBounds(int minXIndex, int maxXIndex) {
-        Y minY = mBounds.getMinY();
-        Y maxY = mBounds.getMaxY();
-        if (mLinesData.getYPoints().size() != mHiddenChartLines.size()) {
-            // Calculate Y bounds only if at least 1 line is visible
-            Pair<Y, Y> yMinMax = calculateCurrentYBounds(mLinesData.getYPoints(), minXIndex, maxXIndex, mHiddenChartLines);
-            minY = yMinMax.first;
-            maxY = yMinMax.second;
-            if (mMinYValue != null && mMinYValue.compareTo(minY) < 0) {
-                minY = mMinYValue;
-            }
-            if (mMaxYValue != null && mMaxYValue.compareTo(maxY) > 0) {
-                maxY = mMaxYValue;
-            }
+        mYBoundsPair = mLinesData.calculateYBounds(minXIndex, maxXIndex, mHiddenChartLines, mYBoundsPair);
+        if (mMinYValue != null && mMinYValue.compareTo(mYBoundsPair.first) < 0) {
+            mYBoundsPair.first = mMinYValue;
         }
-        mBounds.update(minXIndex, maxXIndex, minY, maxY);
+        if (mMaxYValue != null && mMaxYValue.compareTo(mYBoundsPair.second) > 0) {
+            mYBoundsPair.second = mMaxYValue;
+        }
+        mBounds.update(minXIndex, maxXIndex, mYBoundsPair.first, mYBoundsPair.second);
     }
 
     public void setPointsDrawer(ChartPointsDrawer<X, Y, ?> pointsDrawer) {
@@ -199,27 +194,6 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
 
     public void setMaxYValue(Y maxYValue) {
         mMaxYValue = maxYValue;
-    }
-
-    private static <C extends ChartCoordinate> Pair<C, C> calculateCurrentYBounds(List<ChartPointsData<C>> pointsData, int minIndex, int maxIndex, Set<String> excludedLines) {
-        C minY = null; C maxY = null;
-        for (ChartPointsData<C> chartColumnData : pointsData) {
-            if (excludedLines.contains(chartColumnData.getId())) {
-                // Ignore hidden chart lines
-                continue;
-            }
-            Pair<Integer, Integer> chartColumnBounds = ChartPointsData.calculateMinMaxIndexes(chartColumnData, minIndex, maxIndex);
-            C min = chartColumnData.getPoints().get(chartColumnBounds.first);
-            C max = chartColumnData.getPoints().get(chartColumnBounds.second);
-
-            if (minY == null || min.compareTo(minY) < 0) {
-                minY = min;
-            }
-            if (maxY == null || max.compareTo(maxY) > 0) {
-                maxY = max;
-            }
-        }
-        return new Pair<>(minY, maxY);
     }
 
 }

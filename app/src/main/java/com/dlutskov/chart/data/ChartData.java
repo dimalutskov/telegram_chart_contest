@@ -8,6 +8,11 @@ import java.util.Map;
 
 public class ChartData {
 
+    public static final String CHART_TYPE_X = "x";
+    public static final String CHART_TYPE_LINE = "line";
+    public static final String CHART_TYPE_BAR = "bar";
+    public static final String CHART_TYPE_AREA = "area";
+
     private final ChartLinesData<DateCoordinate, LongCoordinate> mOverviewData;
     private final Map<Long, ChartLinesData<DateCoordinate, LongCoordinate>> mExpandedData;
 

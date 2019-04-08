@@ -1,7 +1,5 @@
 package com.dlutskov.chart_lib.drawers;
 
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 
 import com.dlutskov.chart_lib.ChartBounds;
@@ -13,8 +11,7 @@ import com.dlutskov.chart_lib.utils.ChartUtils;
 
 import java.util.List;
 
-public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate>
-        extends ChartPointsDrawer<X, Y, ChartBarsDrawer.DrawingData<Y>> {
+public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartLinesDrawer<X, Y> {
 
     public ChartBarsDrawer(ChartView<X, Y> chartView) {
         super(chartView);
@@ -22,11 +19,12 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
 
     @Override
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
-        int columnWidth = drawingRect.width() / (bounds.getMaxXIndex() - bounds.getMinXIndex());
+        int pointsCount = bounds.getMaxXIndex() - bounds.getMinXIndex();
+        int columnWidth = drawingRect.width() / pointsCount;
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
             if (drawingData == null) {
-                drawingData = new DrawingData<>(pointsData);
+                drawingData = new DrawingData<>(pointsData, columnWidth);
                 this.drawingData.add(drawingData);
             }
             if (!drawingData.isVisible()) continue;
@@ -36,18 +34,9 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
         }
     }
 
-    @Override
-    public void onDraw(Canvas canvas, Rect drawingRect) {
-        for (DrawingData<Y> drawingData : drawingData) {
-            if (drawingData.isVisible()) {
-                canvas.drawLines(drawingData.mLines, drawingData.getPaint());
-            }
-        }
-    }
-
     private void buildLines(float lines[], List<Y> yPoints, ChartBounds<X, Y> bounds, int strokeWidth, Rect drawingRect) {
         int lineIndex = 0;
-        for (int i = 0; i < yPoints.size(); i++) {
+        for (int i = bounds.getMinXIndex(); i < bounds.getMaxXIndex(); i++) {
             float x = ChartUtils.calcXCoordinate(bounds, drawingRect, i);
             float y = ChartUtils.calcYCoordinate(bounds, drawingRect, yPoints.get(i));
             lines[lineIndex++] = x + strokeWidth / 2;
@@ -57,17 +46,4 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
         }
     }
 
-    static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {
-
-        private float[] mLines;
-
-        DrawingData(ChartPointsData<C> pointsData) {
-            super(pointsData);
-
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(3);
-
-            mLines = new float[pointsData.getPoints().size() * 4];
-        }
-    }
 }

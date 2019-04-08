@@ -55,16 +55,17 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
 
     @Override
     public void onDraw(Canvas canvas, Rect drawingRect) {
+        int linesCount = (getBounds().getMaxXIndex() - getBounds().getMinXIndex()) * 4;
         for (DrawingData<Y> drawingData : drawingData) {
             if (drawingData.isVisible()) {
-                canvas.drawLines(drawingData.mLines, drawingData.getPaint());
+                canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
             }
         }
     }
 
     private void buildLines(float lines[], List<Y> yPoints, ChartBounds<X, Y> bounds, Rect drawingRect) {
         int lineIndex = 0;
-        for (int i = 0; i < yPoints.size() - 1; i++) {
+        for (int i = bounds.getMinXIndex(); i < bounds.getMaxXIndex(); i++) { // TODO
             float x = ChartUtils.calcXCoordinate(bounds, drawingRect, i);
             float y = ChartUtils.calcYCoordinate(bounds, drawingRect, yPoints.get(i));
             lines[lineIndex++] = x;
@@ -78,7 +79,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
 
     static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {
 
-        private float[] mLines;
+        protected float[] mLines;
 
         DrawingData(ChartPointsData<C> pointsData, int strokeWidth) {
             super(pointsData);

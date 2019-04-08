@@ -29,6 +29,10 @@ public class ChartDataParser {
 
         Map<String, ChartColumnData> dataHolderMap = new HashMap<>();
 
+        boolean isPercentage = false;
+        boolean isStacked = false;
+        boolean isYScaled = false;
+
         JsonToken token = parser.nextToken();
         while (token != JsonToken.END_OBJECT && token != null) {
             String fieldname = parser.getCurrentName();
@@ -42,10 +46,19 @@ public class ChartDataParser {
                     parseChartDataValue(dataHolderMap, parser, (chartData, token1) -> chartData.type = parser.getValueAsString());
                     break;
                 case "names":
-                    parseChartDataValue(dataHolderMap, parser, (chartData, token12) -> chartData.name = parser.getValueAsString());
+                    parseChartDataValue(dataHolderMap, parser, (chartData, token1) -> chartData.name = parser.getValueAsString());
                     break;
                 case "colors":
-                    parseChartDataValue(dataHolderMap, parser, (chartData, token13) -> chartData.color = parser.getValueAsString());
+                    parseChartDataValue(dataHolderMap, parser, (chartData, token1) -> chartData.color = parser.getValueAsString());
+                    break;
+                case "percentage":
+                    isPercentage = parser.getValueAsBoolean();
+                    break;
+                case "stacked":
+                    isStacked = parser.getValueAsBoolean();
+                    break;
+                case "y_scaled":
+                    isYScaled = parser.getValueAsBoolean();
                     break;
                 default:
                     parser.skipChildren();
@@ -56,7 +69,7 @@ public class ChartDataParser {
         ChartPointsData<DateCoordinate> xPoints = null;
         List<ChartPointsData<LongCoordinate>> yPoints = new ArrayList<>();
         for (ChartColumnData chartColumnData : dataHolderMap.values()) {
-            if (chartColumnData.type.equals("x")) {
+            if (chartColumnData.type.equals(ChartData.CHART_TYPE_X)) {
                 xPoints = new ChartPointsData<>(chartColumnData.id, chartColumnData.name, chartColumnData.type, 0,
                         createDateCoordinates(chartColumnData.points));
             } else {
@@ -64,7 +77,11 @@ public class ChartDataParser {
                         createLongCoordinates(chartColumnData.points)));
             }
         }
-        return new ChartLinesData<>(xPoints, yPoints);
+        ChartLinesData<DateCoordinate, LongCoordinate> result = new ChartLinesData<>(xPoints, yPoints);
+        result.setPercentage(isPercentage);
+        result.setStacked(isStacked);
+        result.setYScaled(isYScaled);
+        return result;
     }
 
     private static void parseColumns(Map<String, ChartColumnData> chartDataMap, JsonParser parser) throws IOException  {

@@ -123,10 +123,12 @@ public class MainActivity extends Activity {
         // Container
         LinearLayout containerView = new LinearLayout(ctx);
         int headerHeight = ChartUtils.getPixelForDp(ctx, 56);
-        containerView.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, headerHeight));
         containerView.setOrientation(LinearLayout.HORIZONTAL);
         int padding = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
-        containerView.setPadding(padding, 0, padding, padding);
+        containerView.setPadding(padding, 0, padding, 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, headerHeight);
+        params.bottomMargin = padding;
+        containerView.setLayoutParams(params);
 
         TextView titleView = new TextView(ctx);
         LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, WRAP_CONTENT);

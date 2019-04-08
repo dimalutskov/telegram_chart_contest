@@ -7,6 +7,8 @@ import com.dlutskov.chart_lib.ChartPreviewView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
+import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 
 public class ChartController implements ChartPreviewView.Listener, ChartCheckBoxesContainer.Listener  {
 
@@ -31,6 +33,7 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
 
     void showChart() {
         ChartLinesData<DateCoordinate, LongCoordinate> chartData = mChartData.getOverviewData();
+        initChartDrawers(chartData);
         int pointsSize = chartData.getXPoints().getPoints().size();
         int leftBound = (int) (pointsSize * (1 - CHART_PREVIEW_MIN_SELECTED_WIDTH));
         int rightBound = pointsSize - 1;
@@ -41,6 +44,23 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
         mChartPreview.updateSelectedAreaBounds(leftBound, rightBound, rightBound - leftBound);
         // Create new checkboxes for new data
         mCheckBoxesContainer.createCheckBoxes(chartData);
+    }
+
+    private void initChartDrawers(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
+        if (chartData.isStacked()) {
+            mChartView.setMinYValue(LongCoordinate.valueOf(0));
+            mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
+        }
+
+        if (chartData.getYPoints().get(0).getType().equals(ChartData.CHART_TYPE_BAR)) {
+            if (chartData.isStacked()) {
+                mChartView.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartView));
+                mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
+            } else {
+                mChartView.setPointsDrawer(new ChartBarsDrawer<>(mChartView));
+                mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
+            }
+        }
     }
 
     void applyCurrentColors(AppDesign.Theme curTheme, boolean animate) {

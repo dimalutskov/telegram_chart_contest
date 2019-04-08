@@ -55,6 +55,10 @@ public abstract class ChartDataDrawer<X extends ChartCoordinate, Y extends Chart
         mChartView.invalidate();
     }
 
+    ChartBounds<X, Y> getBounds() {
+        return mBounds;
+    }
+
     public void updatePointsVisibility(String pointsId, boolean visibility) {}
 
     /**
