@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
+import android.view.ViewParent;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
@@ -94,6 +95,8 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
     private float mLastTouchX;
 
     private SlideType mSlideType = SlideType.NONE;
+
+    private boolean isSlideIntercepted;
 
     private Listener mListener;
 
@@ -202,36 +205,29 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 mDownTouchX = x;
-                if (x > mAreaLeftBound - mHorizontalBorderStrokeWidth - mTouchSlop * 2 && x < mAreaLeftBound + mHorizontalBorderStrokeWidth + mTouchSlop * 2) {
+                if (x > mAreaLeftBound - mHorizontalBorderStrokeWidth - mTouchSlop && x < mAreaLeftBound + mHorizontalBorderStrokeWidth + mTouchSlop) {
                     // Touch on left border
                     mSlideType = SlideType.LEFT_BORDER;
-                } else if (x > mAreaRightBound - mHorizontalBorderStrokeWidth - mTouchSlop * 2 && x < mAreaRightBound + mHorizontalBorderStrokeWidth + mTouchSlop * 2) {
+                } else if (x > mAreaRightBound - mHorizontalBorderStrokeWidth - mTouchSlop && x < mAreaRightBound + mHorizontalBorderStrokeWidth + mTouchSlop) {
                     // Touch on right border
                     mSlideType = SlideType.RIGHT_BORDER;
                 } else if (x > mAreaLeftBound && x < mAreaRightBound) {
                     // Touch on selected area
                     mSlideType = SlideType.AREA;
                 } else {
-                    // Touch outside selected area - move center of selected area to this
-                    moveSelectedArea(x);
-                    mSlideType = SlideType.AREA;
-                }
-                break;
-
-            case MotionEvent.ACTION_MOVE:
-                if (mSlideType != SlideType.NONE && Math.abs(x - mDownTouchX) > mTouchSlop) {
-                    // Moving action is triggered
-                    return true;
+                    mSlideType = SlideType.NONE;
+                    return false;
                 }
                 break;
 
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
+                isSlideIntercepted = false;
                 mSlideType = SlideType.NONE;
                 break;
         }
         mLastTouchX = x;
-        return super.onInterceptTouchEvent(event);
+        return true;
     }
 
     @Override
@@ -240,31 +236,31 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
             case MotionEvent.ACTION_MOVE:
                 if (mSlideType != SlideType.NONE) {
                     float x = event.getX();
-                    move(x - mLastTouchX);
-                    mLastTouchX = x;
+                    if (!isSlideIntercepted && Math.abs(x - mDownTouchX) > mTouchSlop / 2) {
+                        isSlideIntercepted = true;
+                        disableParentTouch();
+                    }
+                    if (isSlideIntercepted) {
+                        move(x - mLastTouchX);
+                        mLastTouchX = x;
+                        disableParentTouch();
+                    }
                 }
                 break;
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
+                isSlideIntercepted = false;
                 mSlideType = SlideType.NONE;
                 break;
         }
+
         return true;
     }
 
-    private void moveSelectedArea(float x) {
-        float areaWidth = mAreaRightBound - mAreaLeftBound;
-        float left = x - areaWidth / 2f;
-        float right = x + areaWidth / 2f;
-        if (left < 0) {
-            left = 0;
-            right = areaWidth;
-        } else if (right > getWidth()) {
-            right = getWidth();
-            left = right - areaWidth;
-        }
-        if (left != mAreaLeftBound || right != mAreaRightBound) {
-            onSelectedAreaChanged(left, right);
+    private void disableParentTouch() {
+        final ViewParent parent = getParent();
+        if (parent != null) {
+            parent.requestDisallowInterceptTouchEvent(true);
         }
     }
 
