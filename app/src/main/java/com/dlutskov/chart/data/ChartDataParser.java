@@ -1,19 +1,15 @@
 package com.dlutskov.chart.data;
 
-import android.content.Context;
 import android.graphics.Color;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
-import com.dlutskov.dlutskov.customchart.R;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -27,73 +23,99 @@ import java.util.Map;
  */
 public class ChartDataParser {
 
-    public static List<ChartLinesData<DateCoordinate, LongCoordinate>> parse(Context context) {
-        List<ChartLinesData<DateCoordinate, LongCoordinate>> result = new ArrayList<>();
+    public static ChartLinesData<DateCoordinate, LongCoordinate> parse(InputStream stream) throws IOException {
+        final JsonParser parser = new JsonFactory().createParser(stream);
+        parser.nextToken();
 
-        try {
-            JSONArray jsonArray = new JSONArray(readRawTextFile(context, R.raw.chart_data));
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                Map<String, ChartColumnData> dataHolderMap = new HashMap<>();
+        Map<String, ChartColumnData> dataHolderMap = new HashMap<>();
 
-                JSONArray columns = jsonObject.getJSONArray("columns");
-                for (int j = 0; j < columns.length(); j++) {
-                    JSONArray points = columns.getJSONArray(j);
-                    ChartColumnData pointsDataHolder = null;
-                    for (int k = 0; k < points.length(); k++) {
-                        if (k == 0) {
-                            pointsDataHolder = findChartColumnData(dataHolderMap, points.getString(k));
-                        } else {
-                            pointsDataHolder.points.add(points.getLong(k));
-                        }
-                    }
-                }
+        JsonToken token = parser.nextToken();
+        while (token != JsonToken.END_OBJECT && token != null) {
+            String fieldname = parser.getCurrentName();
+            parser.nextToken();
 
-                JSONObject types = jsonObject.getJSONObject("types");
-                for (int j = 0; j < types.names().length(); j++) {
-                    String id = (String) types.names().get(j);
-                    findChartColumnData(dataHolderMap, id).type = types.getString(id);
-                }
-
-                JSONObject names = jsonObject.getJSONObject("names");
-                for (int j = 0; j < names.names().length(); j++) {
-                    String id = (String) names.names().get(j);
-                    findChartColumnData(dataHolderMap, id).name = names.getString(id);
-                }
-
-                JSONObject colors = jsonObject.getJSONObject("colors");
-                for (int j = 0; j < colors.names().length(); j++) {
-                    String id = (String) colors.names().get(j);
-                    findChartColumnData(dataHolderMap, id).color = colors.getString(id);
-                }
-
-                ChartPointsData<DateCoordinate> xPoints = null;
-                List<ChartPointsData<LongCoordinate>> yPoints = new ArrayList<>();
-                for (ChartColumnData chartColumnData : dataHolderMap.values()) {
-                    if (chartColumnData.type.equals("x")) {
-                        xPoints = new ChartPointsData<>(chartColumnData.id, chartColumnData.name, 0,
-                                createDateCoordinates(chartColumnData.points));
-                    } else if (chartColumnData.type.equals("line")) {
-                        yPoints.add(new ChartPointsData<>(chartColumnData.id, chartColumnData.name, Color.parseColor(chartColumnData.color),
-                                createLongCoordinates(chartColumnData.points)));
-                    }
-                }
-                result.add(new ChartLinesData<>(xPoints, yPoints));
+            switch (fieldname) {
+                case "columns":
+                    parseColumns(dataHolderMap, parser);
+                    break;
+                case "types":
+                    parseChartDataValue(dataHolderMap, parser, (chartData, token1) -> chartData.type = parser.getValueAsString());
+                    break;
+                case "names":
+                    parseChartDataValue(dataHolderMap, parser, (chartData, token12) -> chartData.name = parser.getValueAsString());
+                    break;
+                case "colors":
+                    parseChartDataValue(dataHolderMap, parser, (chartData, token13) -> chartData.color = parser.getValueAsString());
+                    break;
+                default:
+                    parser.skipChildren();
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
+            token = parser.nextToken();
         }
 
-        return result;
+        ChartPointsData<DateCoordinate> xPoints = null;
+        List<ChartPointsData<LongCoordinate>> yPoints = new ArrayList<>();
+        for (ChartColumnData chartColumnData : dataHolderMap.values()) {
+            if (chartColumnData.type.equals("x")) {
+                xPoints = new ChartPointsData<>(chartColumnData.id, chartColumnData.name, chartColumnData.type, 0,
+                        createDateCoordinates(chartColumnData.points));
+            } else {
+                yPoints.add(new ChartPointsData<>(chartColumnData.id, chartColumnData.name, chartColumnData.type, Color.parseColor(chartColumnData.color),
+                        createLongCoordinates(chartColumnData.points)));
+            }
+        }
+        return new ChartLinesData<>(xPoints, yPoints);
     }
 
-    private static ChartColumnData findChartColumnData(Map<String, ChartColumnData> dataMap, String id) {
-        ChartColumnData result = dataMap.get(id);
-        if (result == null) {
-            result = new ChartColumnData(id);
-            dataMap.put(id, result);
+    private static void parseColumns(Map<String, ChartColumnData> chartDataMap, JsonParser parser) throws IOException  {
+        JsonToken token = parser.nextToken();
+        while (token != JsonToken.END_ARRAY && token != null) {
+            token = parser.nextToken();
+            ChartColumnData chartData = null;
+            while (token != JsonToken.END_ARRAY && token != null) {
+                // First array item is graph id
+                if (chartData == null) {
+                    chartData = findGraphData(chartDataMap, parser.getValueAsString());
+                } else {
+                    chartData.points.add(parser.getValueAsLong());
+                }
+                token = parser.nextToken();
+            }
+            token = parser.nextToken();
         }
-        return result;
+    }
+
+    private static void parseChartDataValue(Map<String, ChartColumnData> chartDataMap, JsonParser parser, ParserPredicate predicate) throws IOException {
+        JsonToken token = parser.nextToken();
+        while (token != JsonToken.END_OBJECT && token != null) {
+            String id = parser.getCurrentName();
+            ChartColumnData chartData = findGraphData(chartDataMap, id);
+            parser.nextToken();
+            predicate.parse(chartData, token);
+            token = parser.nextToken();
+        }
+    }
+
+    /**
+     * @param graphsDataMap - where to found
+     * @param id - key to found
+     * @return Returns the value with specified id, if there were no such value in the map - value wish specified id will
+     *         be created, put to map and returned
+     */
+    private static ChartColumnData findGraphData(Map<String, ChartColumnData> graphsDataMap, String id) {
+        ChartColumnData chartData = graphsDataMap.get(id);
+        if (chartData == null) {
+            chartData = new ChartColumnData(id);
+            graphsDataMap.put(id, chartData);
+        }
+        return chartData;
+    }
+
+    /**
+     * Used to parse specific field of ChartColumnData
+     */
+    interface ParserPredicate {
+        void parse(ChartColumnData chartData, JsonToken token) throws IOException;
     }
 
     private static List<LongCoordinate> createLongCoordinates(List<Long> points) {
@@ -110,23 +132,6 @@ public class ChartDataParser {
             result.add(DateCoordinate.valueOf(point));
         }
         return result;
-    }
-
-    private static String readRawTextFile(Context ctx, int resId) {
-        InputStream inputStream = ctx.getResources().openRawResource(resId);
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        int i;
-        try {
-            i = inputStream.read();
-            while (i != -1) {
-                byteArrayOutputStream.write(i);
-                i = inputStream.read();
-            }
-            inputStream.close();
-        } catch (IOException e) {
-            return null;
-        }
-        return byteArrayOutputStream.toString();
     }
 
     private static class ChartColumnData {

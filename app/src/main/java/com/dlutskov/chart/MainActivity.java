@@ -6,22 +6,25 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.dlutskov.chart.data.ChartDataParser;
+import com.dlutskov.chart.data.ChartData;
+import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
-import com.dlutskov.chart.view.ChartTabsView;
 import com.dlutskov.chart.view.MoonIconView;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
-import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
@@ -31,33 +34,21 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
  * Example of using custom created {@link ChartView} for Telegram Contests
  * Activity's layout and all app resources are created programmatically to reduce apk size
  */
-public class MainActivity extends Activity implements
-        ChartTabsView.Listener<DateCoordinate, LongCoordinate>,
-        ChartPreviewView.Listener,
-        ChartCheckBoxesContainer.Listener {
+public class MainActivity extends Activity {
 
     /**
      * General padding in DP which is used by most of the activity's views
      */
-    private static final int PADDING_GENERAL = 16;
+    public static final int PADDING_GENERAL = 16;
 
-    private static final float CHART_PREVIEW_MIN_SELECTED_WIDTH = 0.2f;
-
-    private static final int APP_MODE_ANIM_DURATION = 250;
+    public static final int APP_MODE_ANIM_DURATION = 250;
 
     private LinearLayout mRootView;
 
     private ViewGroup mHeaderLayout;
     private MoonIconView mIconMoon;
 
-    private ChartTabsView<DateCoordinate, LongCoordinate> mChartTabs;
-    private ChartCheckBoxesContainer mChartCheckBoxesContainer;
-
-    private ChartFullView<DateCoordinate, LongCoordinate> mChartView;
-    private ChartPreviewView<DateCoordinate, LongCoordinate> mChartPreview;
-
-    private List<ChartLinesData<DateCoordinate, LongCoordinate>> mChartData;
-    private ChartLinesData<DateCoordinate, LongCoordinate> mCurrentChart;
+    private List<ChartController> mChartsControllers = new ArrayList<>();
 
     private AppDesign.Theme mTheme = AppDesign.Theme.DAY;
 
@@ -67,7 +58,7 @@ public class MainActivity extends Activity implements
 
         // Root Container
         mRootView = new LinearLayout(this);
-        mRootView.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
+        mRootView.setLayoutParams(new ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
         mRootView.setOrientation(LinearLayout.VERTICAL);
 
         // Header Container
@@ -79,39 +70,53 @@ public class MainActivity extends Activity implements
         });
         mRootView.addView(mHeaderLayout);
 
-        // Tabs Container
-        mChartTabs = createChartTabsView(this);
-        mChartTabs.setListener(this);
-        mRootView.addView(mChartTabs);
+        ////////////////////
+        List<ChartData> chartDataList = null;
+        try {
+            chartDataList = ChartDataProvider.readChartData(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        // Chart Full View
-        mChartView = createChartFullView(this);
-        mRootView.addView(mChartView);
+        // Scroll view for charts
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        // Container for charts
+        LinearLayout chartsContainer = new LinearLayout(this);
+        chartsContainer.setLayoutParams(new ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
+        chartsContainer.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(chartsContainer);
 
-        // Chart Preview
-        mChartPreview = createChartPreviewView(this);
-        mChartPreview.setListener(this);
-        mRootView.addView(mChartPreview);
+        createChartControllers(chartDataList, chartsContainer);
+        /////////////////////
 
-        // Chart CheckBoxes
-        mChartCheckBoxesContainer = createCheckboxesContainer(this);
-        mChartCheckBoxesContainer.setListener(this);
-        mRootView.addView(mChartCheckBoxesContainer);
-
+        mRootView.addView(scrollView);
         setContentView(mRootView);
 
         applyCurrentColors(false);
-
-        showChartsData();
     }
 
-    private void showChartsData() {
-        mChartData = ChartDataParser.parse(this);
-        // Display first chart by default
-        mCurrentChart = mChartData.get(0);
-        mChartTabs.createTabs(mChartData, 0);
+    private void createChartControllers( List<ChartData> chartDataList, ViewGroup chartsContainer) {
+        int margin = ChartUtils.getPixelForDp(this, PADDING_GENERAL * 2);
+        for (ChartData chartData : chartDataList) {
+            // Chart Full View
+            ChartFullView<DateCoordinate, LongCoordinate> chartView = createChartFullView(this);
+            chartsContainer.addView(chartView);
+            // Chart Preview
+            ChartPreviewView<DateCoordinate, LongCoordinate> chartPreview = createChartPreviewView(this);
+            chartsContainer.addView(chartPreview);
+            // Chart CheckBoxes
+            ChartCheckBoxesContainer checkboxesContainer = createCheckboxesContainer(this);
+            chartsContainer.addView(checkboxesContainer);
 
-        showChart(mCurrentChart);
+            View spaceView = new View(this);
+            spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin));
+            chartsContainer.addView(spaceView);
+
+            ChartController controller = new ChartController(chartData, chartView, chartPreview, checkboxesContainer);
+            controller.showChart();
+            mChartsControllers.add(controller);
+        }
     }
 
     private static ViewGroup createHeaderView(Context ctx) {
@@ -121,7 +126,7 @@ public class MainActivity extends Activity implements
         containerView.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, headerHeight));
         containerView.setOrientation(LinearLayout.HORIZONTAL);
         int padding = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
-        containerView.setPadding(padding, 0, padding, 0);
+        containerView.setPadding(padding, 0, padding, padding);
 
         TextView titleView = new TextView(ctx);
         LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, WRAP_CONTENT);
@@ -141,18 +146,6 @@ public class MainActivity extends Activity implements
         containerView.addView(moonIconView);
 
         return containerView;
-    }
-
-    private static ChartTabsView createChartTabsView(Context ctx) {
-        ChartTabsView view = new ChartTabsView(ctx);
-        view.setOrientation(LinearLayout.HORIZONTAL);
-        int height = ChartUtils.getPixelForDp(ctx, 50);
-        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL / 2);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
-        params.leftMargin = margin;
-        params.rightMargin = margin;
-        view.setLayoutParams(params);
-        return view;
     }
 
     private static ChartFullView<DateCoordinate, LongCoordinate> createChartFullView(Context ctx) {
@@ -199,7 +192,6 @@ public class MainActivity extends Activity implements
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
                     mRootView.setBackgroundColor(updatedColor);
-                    mChartView.getPointsDetailsDrawer().setPointCircleBackground(updatedColor);
                 });
 
         AppDesign.applyColorWithAnimation(AppDesign.bgHeader(prevTheme),
@@ -208,82 +200,9 @@ public class MainActivity extends Activity implements
                     mIconMoon.setBackgroundColor(updatedColor);
                 });
 
-        AppDesign.applyColorWithAnimation(AppDesign.chartGridColor(prevTheme),
-                AppDesign.chartGridColor(curTheme), duration, updatedColor -> {
-                    mChartView.getYLabelsDrawer().setGridColor(updatedColor);
-                    mChartView.getPointsDetailsDrawer().setBackgroundBorderColor(updatedColor);
-                    mChartView.getPointsDetailsDrawer().setDividerColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.textColorChartLabels(prevTheme),
-                AppDesign.textColorChartLabels(curTheme), duration, updatedColor -> {
-                    mChartView.setLabelsTextColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPointsDetails(prevTheme),
-                AppDesign.bgChartPointsDetails(curTheme), duration, updatedColor -> {
-                    mChartView.getPointsDetailsDrawer().setBackgroundColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.chartPointsDetailsXLabel(prevTheme),
-                AppDesign.chartPointsDetailsXLabel(curTheme), duration, updatedColor -> {
-                    mChartView.getPointsDetailsDrawer().setXLabelColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPreview(prevTheme),
-                AppDesign.bgChartPreview(curTheme), duration, updatedColor -> {
-                    mChartPreview.setBackgroundColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPreviewUnselectedArea(prevTheme),
-                AppDesign.bgChartPreviewUnselectedArea(curTheme), duration, updatedColor -> {
-                    mChartPreview.setUnselectedBackgroundColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPreviewSelectedArea(prevTheme),
-                AppDesign.bgChartPreviewSelectedArea(curTheme), duration, updatedColor -> {
-                    mChartPreview.setSelectedBackgroundColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.chartPreviewBordersColor(prevTheme),
-                AppDesign.chartPreviewBordersColor(curTheme), duration, updatedColor -> {
-                    mChartPreview.setAreaBordersColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.textCheckBox(prevTheme),
-                AppDesign.textCheckBox(curTheme), duration, updatedColor -> {
-                    mChartCheckBoxesContainer.setTextColor(updatedColor);
-                });
-    }
-
-    private void showChart(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
-        int pointsSize = chartData.getXPoints().getPoints().size();
-        int leftBound = (int) (pointsSize * (1 - CHART_PREVIEW_MIN_SELECTED_WIDTH));
-        int rightBound = pointsSize - 1;
-        // Update full chart
-        mChartView.updateChartData(chartData, leftBound, rightBound);
-        // Update preview chart with default bounds
-        mChartPreview.updateChartData(chartData);
-        mChartPreview.updateSelectedAreaBounds(leftBound, rightBound, rightBound - leftBound);
-        // Create new checkboxes for new data
-        mChartCheckBoxesContainer.createCheckBoxes(chartData);
-    }
-
-    ////////////////// CALLBACKS //////////////////
-    @Override
-    public void onChartTabSelected(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
-        showChart(chartData);
-    }
-
-    @Override
-    public void onChartPreviewAreaChanged(int minXIndex, int maxXIndex) {
-        mChartView.updateHorizontalBounds(minXIndex, maxXIndex);
-    }
-
-    @Override
-    public void onChartLineCheckBoxStateChanged(String id, boolean checked) {
-        mChartView.updatePointsVisibility(id, checked);
-        mChartPreview.updatePointsVisibility(id, checked);
+        for (ChartController controller : mChartsControllers) {
+            controller.applyCurrentColors(mTheme, animate);
+        }
     }
 
 }

@@ -14,15 +14,17 @@ public class ChartPointsData<C extends ChartCoordinate> {
 
     private final String mId;
     private final String mName;
+    private final String mType;
     private final int mColor;
     private final List<C> mPoints;
 
     private final int mMinValueIndex;
     private final int mMaxValueIndex;
 
-    public ChartPointsData(String id, String name, int color, List<C> points) {
+    public ChartPointsData(String id, String name, String type, int color, List<C> points) {
         this.mId = id;
         this.mName = name;
+        this.mType = type;
         this.mColor = color;
         this.mPoints = points;
 
@@ -37,6 +39,10 @@ public class ChartPointsData<C extends ChartCoordinate> {
 
     public String getName() {
         return mName;
+    }
+
+    public String getType() {
+        return mType;
     }
 
     public int getColor() {

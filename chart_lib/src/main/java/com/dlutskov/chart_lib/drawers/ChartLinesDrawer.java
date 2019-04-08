@@ -76,7 +76,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
         }
     }
 
-    protected static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {
+    static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {
 
         private float[] mLines;
 

@@ -4,6 +4,8 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Rect;
 
 import com.dlutskov.chart_lib.ChartBounds;
@@ -28,10 +30,14 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     // List of handlers which contains animated axis labels which need to be appeared or disappeared
     private List<AnimatedCellsHandler> mAnimatedCellsHandlers = new ArrayList<>();
 
+    private Paint mBackgroundPaint = new Paint();
+
     private long mFadingAnimationDuration = ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION;
 
     public ChartXAxisLabelsDrawer(ChartView<X, Y> chartView, int size) {
         super(chartView, size);
+        mBackgroundPaint.setStyle(Paint.Style.FILL);
+        mBackgroundPaint.setColor(Color.WHITE);
     }
 
     @Override
@@ -156,7 +162,14 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void onDraw(Canvas canvas, Rect drawingRect) {
+    public void onDraw(Canvas canvas, Rect drawingRect) {}
+
+    @Override
+    public void onAfterDraw(Canvas canvas, Rect drawingRect) {
+        super.onAfterDraw(canvas, drawingRect);
+        // Draw background
+        canvas.drawRect(drawingRect.left, drawingRect.bottom, drawingRect.right, canvas.getHeight(), mBackgroundPaint);
+
         float y = canvas.getHeight() - mTextSize / 2;
         for (LabelCell drawnLabel : mLabelCells) {
             mLabelPaint.setAlpha(drawnLabel.alpha);
@@ -165,6 +178,11 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         for (AnimatedCellsHandler animatedCellsHandler : mAnimatedCellsHandlers) {
             animatedCellsHandler.draw(canvas, y);
         }
+    }
+
+    public void setBackgroundColor(int color) {
+        mBackgroundPaint.setColor(color);
+        mChartView.invalidate();
     }
 
     // Contains data about axis label which is drawn on the canvas

@@ -43,8 +43,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         mYAxisLabelsDrawer.setDrawOverPoints(true);
         mPointsDetailsDrawer = new ChartPointsDetailsDrawer<>(this);
 
-        addDrawer(mXAxisLabelsDrawer);
         addDrawer(mYAxisLabelsDrawer);
+        addDrawer(mXAxisLabelsDrawer);
         addDrawer(mPointsDetailsDrawer);
     }
 

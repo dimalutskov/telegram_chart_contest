@@ -116,7 +116,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         mPointCircleBackgroundPaint = createPaint(Paint.Style.FILL, Color.WHITE);
         mPointCircleStokePaint = createPaint(Paint.Style.STROKE, Color.BLACK);
-        mPointCircleStokePaint.setStrokeWidth(chartView.getLinesDrawer().getLineStrokeWidth());
+        mPointCircleStokePaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 2));
 
         mMaxBackgroundAlpha = 220;
         mAlphaAnimDuration = 200;

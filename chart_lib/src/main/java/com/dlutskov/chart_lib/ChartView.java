@@ -9,8 +9,9 @@ import android.widget.FrameLayout;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
+import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartDataDrawer;
-import com.dlutskov.chart_lib.drawers.ChartLinesDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 
 import java.util.ArrayList;
@@ -24,8 +25,8 @@ import java.util.Set;
  * All drawing is performed on the {@link #onDraw(Canvas)} callback by delegating drawing
  * to all registered {@link ChartDataDrawer} instances.
  * To draw something more - register own ChartDataDrawer by calling {@link #addDrawer(ChartDataDrawer)}
- * Chart's lines drawing performed by the {@link ChartLinesDrawer}. Call {@link #getLinesDrawer()} to get drawer
- * and change it's properties if you need ot {@link #setLinesDrawer(ChartLinesDrawer)} to use your own drawer
+ * Chart's lines drawing performed by the {@link ChartPointsDrawer}. Call {@link #setPointsDrawer(ChartPointsDrawer)}
+ * to use your own drawer
  * @param <X> type of x axis chart coordinates
  * @param <Y> type of Y axis chart coordinates
  */
@@ -50,7 +51,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     /**
      * Main drawer which draws chart lines
      */
-    protected ChartLinesDrawer<X, Y> mLinesDrawer;
+    protected ChartPointsDrawer<X, Y, ?> mPointsDrawer;
 
     /**
      * All added drawers which wil handle chart updates and be drawn on onDraw callback
@@ -74,7 +75,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
 
     protected void init() {
         mBounds = new ChartBounds<>(0, 0, null, null);
-        mLinesDrawer = new ChartLinesDrawer<>(this);
+        mPointsDrawer = new ChartBarsDrawer<>(this);
         // Set small top padding by default to have some space above the highest point
         int topPadding = ChartUtils.getPixelForDp(getContext(), 6);
         setPadding(0, topPadding, 0, 0);
@@ -95,7 +96,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         mHiddenChartLines.clear();
         // Calculate initial bounds
         calculateCurrentBounds(minXIndex, maxXindex);
-        mLinesDrawer.updateData(mLinesData, mBounds);
+        mPointsDrawer.updateData(mLinesData, mBounds);
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.updateData(chartData, mBounds);
         }
@@ -121,14 +122,14 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
             onBoundsUpdated(currentBounds, mBounds);
         }
         // Update points
-        mLinesDrawer.updatePointsVisibility(pointsId, visible);
+        mPointsDrawer.updatePointsVisibility(pointsId, visible);
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.updatePointsVisibility(pointsId, visible);
         }
     }
 
     protected void onBoundsUpdated(ChartBounds<X, Y> oldBounds, ChartBounds<X, Y> newBounds) {
-        mLinesDrawer.updateBounds(oldBounds, newBounds);
+        mPointsDrawer.updateBounds(oldBounds, newBounds);
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.updateBounds(oldBounds, newBounds);
         }
@@ -154,7 +155,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
             drawer.draw(canvas, mDrawingRect);
         }
         // Draw lines
-        mLinesDrawer.draw(canvas, mDrawingRect);
+        mPointsDrawer.draw(canvas, mDrawingRect);
         // Post Drawing
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.onAfterDraw(canvas, mDrawingRect);
@@ -179,12 +180,8 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         mBounds.update(minXIndex, maxXIndex, minY, maxY);
     }
 
-    public ChartLinesDrawer<X, Y> getLinesDrawer() {
-        return mLinesDrawer;
-    }
-
-    public void setLinesDrawer(ChartLinesDrawer<X, Y> pointsDrawer) {
-        mLinesDrawer = pointsDrawer;
+    public void setPointsDrawer(ChartPointsDrawer<X, Y, ?> pointsDrawer) {
+        mPointsDrawer = pointsDrawer;
         invalidate();
     }
 
