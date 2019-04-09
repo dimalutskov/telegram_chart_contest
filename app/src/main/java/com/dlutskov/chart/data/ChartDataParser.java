@@ -13,7 +13,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +27,7 @@ public class ChartDataParser {
         final JsonParser parser = new JsonFactory().createParser(stream);
         parser.nextToken();
 
-        Map<String, ChartColumnData> dataHolderMap = new HashMap<>();
+        Map<String, ChartColumnData> dataHolderMap = new LinkedHashMap<>();
 
         boolean isPercentage = false;
         boolean isStacked = false;
