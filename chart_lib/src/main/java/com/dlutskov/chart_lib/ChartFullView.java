@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Rect;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
+import android.view.ViewParent;
 
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
@@ -31,6 +33,18 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     private boolean mShowPointsDetailsOnTouch = true;
     private boolean mDetectClickOnPointsDetails;
 
+    /**
+     * Default touch slop to detect if we capture something to handles dragging on touch events
+     */
+    private int mTouchSlop;
+
+    /**
+     * X value of last ACTION_DOWN touch event
+     */
+    private float mDownTouchX;
+
+    private boolean isTouchIntercepted;
+
     public ChartFullView(Context context) {
         super(context);
     }
@@ -39,9 +53,12 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     protected void init() {
         super.init();
         mXAxisLabelsDrawer = new ChartXAxisLabelsDrawer<>(this, ChartUtils.getPixelForDp(getContext(), 32));
-        mYAxisLabelsDrawer = new ChartYAxisLabelsDrawer<>(this, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT); // TODO
+        mYAxisLabelsDrawer = new ChartYAxisLabelsDrawer<>(this, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
         mYAxisLabelsDrawer.setDrawOverPoints(true);
         mPointsDetailsDrawer = new ChartPointsDetailsDrawer<>(this);
+
+        ViewConfiguration vc = ViewConfiguration.get(getContext());
+        mTouchSlop = vc.getScaledTouchSlop();
 
         addDrawer(mYAxisLabelsDrawer);
         addDrawer(mXAxisLabelsDrawer);
@@ -71,6 +88,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             return true;
         }
 
+        // Check if point details window opened and there is touch on it - in this case - no need to detect point details touches
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
             if (mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(ev.getX(), ev.getY())) {
                 // Skip clicks on the details window - it'll be handled by gesture listener
@@ -84,10 +102,17 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                mDownTouchX = x;
+                break;
             case MotionEvent.ACTION_MOVE:
-                if (mShowPointsDetailsOnTouch) {
+                if (!isTouchIntercepted && Math.abs(x - mDownTouchX) > mTouchSlop / 2) {
+                    isTouchIntercepted = true;
+                    disableParentTouch();
+                }
+                if (mShowPointsDetailsOnTouch && isTouchIntercepted) {
                     int xIndex = mBounds.getMinXIndex() + Math.round((x / mDrawingRect.width()) * mBounds.getXPointsCount());
                     mPointsDetailsDrawer.showPointDetails(xIndex);
+                    disableParentTouch();
                 }
                 break;
             case MotionEvent.ACTION_UP:
@@ -95,10 +120,19 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                 if (mPointsDetailsDrawer.isShown()) {
                     mPointsDetailsDrawer.hidePointDetails(ChartPointsDetailsDrawer.DISAPPEARING_DELAY);
                 }
+                isTouchIntercepted = false;
                 mShowPointsDetailsOnTouch = true;
                 break;
         }
+
         return true;
+    }
+
+    private void disableParentTouch() {
+        final ViewParent parent = getParent();
+        if (parent != null) {
+            parent.requestDisallowInterceptTouchEvent(true);
+        }
     }
 
     public ChartXAxisLabelsDrawer<X, Y> getXLabelsDrawer() {
@@ -149,11 +183,15 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     class GestureDetectorListener extends GestureDetector.SimpleOnGestureListener {
 
         @Override
-        public boolean onSingleTapConfirmed(MotionEvent e) {
+        public boolean onSingleTapUp(MotionEvent e) {
             if (mDetectClickOnPointsDetails && mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(e.getX(), e.getY())) {
                 mPointsDetailsDrawer.hidePointDetails(0);
+            } else {
+                int xIndex = mBounds.getMinXIndex() + Math.round((e.getX() / mDrawingRect.width()) * mBounds.getXPointsCount());
+                mPointsDetailsDrawer.showPointDetails(xIndex);
             }
-            return super.onSingleTapConfirmed(e);
+            return super.onSingleTapUp(e);
         }
+
     }
 }

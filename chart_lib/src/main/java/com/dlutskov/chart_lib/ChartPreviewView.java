@@ -96,7 +96,7 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
 
     private SlideType mSlideType = SlideType.NONE;
 
-    private boolean isSlideIntercepted;
+    private boolean isTouchIntercepted;
 
     private Listener mListener;
 
@@ -222,7 +222,7 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
 
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
-                isSlideIntercepted = false;
+                isTouchIntercepted = false;
                 mSlideType = SlideType.NONE;
                 break;
         }
@@ -236,11 +236,11 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
             case MotionEvent.ACTION_MOVE:
                 if (mSlideType != SlideType.NONE) {
                     float x = event.getX();
-                    if (!isSlideIntercepted && Math.abs(x - mDownTouchX) > mTouchSlop / 2) {
-                        isSlideIntercepted = true;
+                    if (!isTouchIntercepted && Math.abs(x - mDownTouchX) > mTouchSlop / 2) {
+                        isTouchIntercepted = true;
                         disableParentTouch();
                     }
-                    if (isSlideIntercepted) {
+                    if (isTouchIntercepted) {
                         move(x - mLastTouchX);
                         mLastTouchX = x;
                         disableParentTouch();
@@ -249,7 +249,7 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
                 break;
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
-                isSlideIntercepted = false;
+                isTouchIntercepted = false;
                 mSlideType = SlideType.NONE;
                 break;
         }
