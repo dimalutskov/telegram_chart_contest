@@ -52,7 +52,8 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
             mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
         }
 
-        if (chartData.getYPoints().get(0).getType().equals(ChartData.CHART_TYPE_BAR)) {
+        String chartType = chartData.getYPoints().get(0).getType();
+        if (chartType.equals(ChartData.CHART_TYPE_BAR) || chartType.equals(ChartData.CHART_TYPE_AREA)) {
             if (chartData.isStacked()) {
                 mChartView.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartView));
                 mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));

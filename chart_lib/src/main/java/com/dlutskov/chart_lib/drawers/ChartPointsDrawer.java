@@ -91,7 +91,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         }
 
         currentAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mAnimDuration);
-        currentAnimator.addUpdateListener(new LinesAnimatorUpdateListener(linesDrawer, visible));
+        currentAnimator.addUpdateListener(new VisibilityAnimatorUpdateListener(linesDrawer, visible));
         if (!visible) {
             currentAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
@@ -118,15 +118,21 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         return null;
     }
 
-    class LinesAnimatorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
+    protected void onVisibilityAnimatorUpdate(P pointsData, int alpha) {
+        pointsData.setAlpha(alpha);
+        pointsData.getPaint().setAlpha(alpha);
+        mChartView.invalidate();
+    }
+
+    class VisibilityAnimatorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
 
         private final P mPointsData;
         private final int mInitialAlpha;
         private boolean mAppear;
 
-        LinesAnimatorUpdateListener(P pointsData, boolean appear) {
+        VisibilityAnimatorUpdateListener(P pointsData, boolean appear) {
             mPointsData = pointsData;
-            mInitialAlpha = pointsData.getPaint().getAlpha();
+            mInitialAlpha = pointsData.getAlpha();
             mAppear = appear;
         }
 
@@ -134,8 +140,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         public void onAnimationUpdate(ValueAnimator animation) {
             float progress = (float) animation.getAnimatedValue();
             int alpha = (int) (mAppear ? mInitialAlpha + (255 - mInitialAlpha) * progress :  mInitialAlpha * (1 - progress));
-            mPointsData.getPaint().setAlpha(alpha);
-            mChartView.invalidate();
+            onVisibilityAnimatorUpdate(mPointsData, alpha);
         }
     }
 
@@ -144,6 +149,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         private final String mId;
 
         private boolean isVisible = true;
+
+        private int mAlpha = 255;
 
         protected Paint paint;
 
@@ -169,6 +176,14 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
         public Paint getPaint() {
             return paint;
+        }
+
+        public int getAlpha() {
+            return mAlpha;
+        }
+
+        public void setAlpha(int alpha) {
+            mAlpha = alpha;
         }
     }
 }
