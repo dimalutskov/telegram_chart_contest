@@ -45,7 +45,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
             if (drawingData == null) {
                 drawingData = new DrawingData<>(pointsData, mLineStrokeWidth);
-                this.drawingData.add(drawingData);
+                this.drawingDataList.add(drawingData);
             }
             if (!drawingData.isVisible()) continue;
 
@@ -56,7 +56,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
     @Override
     public void onDraw(Canvas canvas, Rect drawingRect) {
         int linesCount = (getBounds().getMaxXIndex() - getBounds().getMinXIndex()) * 4;
-        for (DrawingData<Y> drawingData : drawingData) {
+        for (DrawingData<Y> drawingData : drawingDataList) {
             if (drawingData.isVisible()) {
                 canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
             }

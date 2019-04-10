@@ -21,7 +21,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         extends ChartDataDrawer<X, Y>
         implements BoundsUpdateAnimator.Listener<X, Y> {
 
-    protected final List<P> drawingData = new ArrayList<>();
+    protected final List<P> drawingDataList = new ArrayList<>();
 
     private BoundsUpdateAnimator<X, Y> mBoundsAnimHandler;
 
@@ -41,7 +41,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     @Override
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
         super.updateData(data, bounds);
-        drawingData.clear();
+        drawingDataList.clear();
         if (mBoundsAnimHandler != null) {
             mBoundsAnimHandler.cancel();
         }
@@ -112,7 +112,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     }
 
     protected P findDrawingData(String pointsId) {
-        for (P data : drawingData) {
+        for (P data : drawingDataList) {
             if (data.getId().equals(pointsId)) return data;
         }
         return null;

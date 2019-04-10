@@ -31,7 +31,9 @@ import java.util.Set;
  */
 public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> extends FrameLayout {
 
-    // Data to display
+    /**
+     * Data set which will be displayed by the chart drawers
+     */
     protected ChartLinesData<X, Y> mLinesData;
 
     /**

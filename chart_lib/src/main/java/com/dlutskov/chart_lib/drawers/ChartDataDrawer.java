@@ -46,8 +46,12 @@ public abstract class ChartDataDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     public void updateBounds(ChartBounds<X, Y> oldBounds, ChartBounds<X, Y> newBounds) {
+       updateBoundsInternal(newBounds);
+    }
+
+    protected void updateBoundsInternal(ChartBounds<X, Y> newBounds) {
         if (mBounds == null) {
-            mBounds = newBounds;
+            mBounds = new ChartBounds<>(newBounds);
         } else {
             mBounds.update(newBounds);
         }

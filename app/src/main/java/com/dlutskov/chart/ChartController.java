@@ -8,6 +8,7 @@ import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 
 public class ChartController implements ChartPreviewView.Listener, ChartCheckBoxesContainer.Listener  {
@@ -54,7 +55,10 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
 
         String chartType = chartData.getYPoints().get(0).getType();
         if (chartType.equals(ChartData.CHART_TYPE_BAR) || chartType.equals(ChartData.CHART_TYPE_AREA)) {
-            if (chartData.isStacked()) {
+            if (chartData.isPercentage()) {
+                mChartView.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartView));
+                mChartPreview.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartPreview));
+            } else if (chartData.isStacked()) {
                 mChartView.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartView));
                 mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
             } else {

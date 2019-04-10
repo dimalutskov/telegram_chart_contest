@@ -25,7 +25,7 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
             if (drawingData == null) {
                 drawingData = new DrawingData<>(pointsData, columnWidth);
-                this.drawingData.add(drawingData);
+                this.drawingDataList.add(drawingData);
             }
             if (!drawingData.isVisible()) continue;
 

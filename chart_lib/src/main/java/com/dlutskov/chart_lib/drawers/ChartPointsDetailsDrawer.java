@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 
 import com.dlutskov.chart_lib.ChartBounds;
 import com.dlutskov.chart_lib.utils.ChartUtils;
@@ -32,9 +33,12 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     private final Paint mDividerPaint;
     private final Paint mBackgroundBorderPaint;
     private final Paint mBackgroundPaint;
-    private final Paint mTextPaint;
     private final Paint mPointCircleBackgroundPaint;
     private final Paint mPointCircleStokePaint;
+
+    private final Paint mXLabelTextPaint;
+    private final Paint mLabelTextPaint;
+    private final Paint mValuesTextPaint;
 
     // Background rect
     private RectF mViewRect = new RectF();
@@ -54,14 +58,12 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     // Vertical padding between labels inside window
     private int mLabelVerticalPadding;
 
-    // TextColor of x axis value
-    private int mXLabelColor;
-
     // Text size of drawn labels
     private int mTextSize;
 
-    // Max width of drawn y label
-    private int mPointTextWidth;
+    private float mMinWidth;
+
+    private float mWidth; // TODO
 
     // Radius of circle which will reflect selected points coordinates
     private int mPointCircleRadius;
@@ -87,13 +89,16 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private boolean isShown;
 
-    private Runnable mHideTask = () -> startAnimator(false);
+    private Runnable mHideTask = () -> {
+        if (isShown) {
+            startAnimator(false);
+        }
+    };
 
     public ChartPointsDetailsDrawer(ChartView<X, Y> chartView) {
         super(chartView);
 
         Context ctx = chartView.getContext();
-        mXLabelColor = Color.BLACK;
         mCornerRadius = ChartUtils.getPixelForDp(ctx, 4);
         mTextSize = ChartUtils.getPixelForDp(ctx, 12);
         mVerticalMargin = ChartUtils.getPixelForDp(ctx, 8);
@@ -103,6 +108,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mLabelVerticalPadding = ChartUtils.getPixelForDp(ctx, 4);
         mPointCircleRadius = ChartUtils.getPixelForDp(ctx, 3);
 
+        mMinWidth = ChartUtils.getPixelForDp(ctx, 120);
+
         mDividerPaint = createPaint(Paint.Style.STROKE, Color.GRAY);
         mDividerPaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 1));
 
@@ -111,15 +118,22 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         mBackgroundPaint = createPaint(Paint.Style.FILL, Color.WHITE);
 
-        mTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
-        mTextPaint.setTextSize(mTextSize);
+        mXLabelTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
+        mXLabelTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        mXLabelTextPaint.setTextSize(mTextSize);
+
+        mLabelTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
+        mLabelTextPaint.setTextSize(mTextSize);
+
+        mValuesTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
+        mValuesTextPaint.setTextSize(mTextSize);
 
         mPointCircleBackgroundPaint = createPaint(Paint.Style.FILL, Color.WHITE);
         mPointCircleStokePaint = createPaint(Paint.Style.STROKE, Color.BLACK);
         mPointCircleStokePaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 2));
 
         mMaxBackgroundAlpha = 220;
-        mAlphaAnimDuration = 200;
+        mAlphaAnimDuration = 300;
     }
 
     private static Paint createPaint(Paint.Style style, int color) {
@@ -158,7 +172,20 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
         mData = data;
         mBounds = bounds;
-        mPointTextWidth = (int) (mTextPaint.measureText(bounds.getMaxY().getFullName()) * 1.25f);
+
+        float maxLabelWidth = 0;
+        for (ChartPointsData chartPointsData : data.getYPoints()) {
+            if (mHiddenChartLines.contains(chartPointsData.getId())) continue;
+            float textWidth = mLabelTextPaint.measureText(chartPointsData.getName());
+            if (textWidth > maxLabelWidth) {
+                maxLabelWidth = textWidth;
+            }
+        }
+        float maxValueWidth = mValuesTextPaint.measureText(bounds.getMaxY().getFullName());
+        mWidth = maxLabelWidth + mHorizontalPadding * 2 + maxValueWidth;
+        if (mWidth < mMinWidth) {
+            mWidth = mMinWidth;
+        }
     }
 
     @Override
@@ -178,32 +205,31 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         float xPointsPosition = ChartUtils.calcXCoordinate(mBounds, drawingRect, mSelectedPointPosition);
 
-        // Draw point circles
-        for (int i = 0; i < mData.getYPoints().size(); i++) {
-            ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
-
-            if (mHiddenChartLines.contains(pointsData.getId())) continue;
-
-            // Calculate selected points y position
-            Y pointY = pointsData.getPoints().get(mSelectedPointPosition);
-            float y = ChartUtils.calcYCoordinate(mBounds, drawingRect, pointY);
-
-            // Draw selected point background
-            mPointCircleBackgroundPaint.setAlpha(mCurrentAlpha);
-            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleBackgroundPaint);
-
-            // Draw selected point stroke
-            mPointCircleStokePaint.setAlpha(mCurrentAlpha);
-            mPointCircleStokePaint.setColor(pointsData.getColor());
-            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleStokePaint);
-        }
+        // TODO
+//        // Draw point circles
+//        for (int i = 0; i < mData.getYPoints().size(); i++) {
+//            ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
+//
+//            if (mHiddenChartLines.contains(pointsData.getId())) continue;
+//
+//            // Calculate selected points y position
+//            Y pointY = pointsData.getPoints().get(mSelectedPointPosition);
+//            float y = ChartUtils.calcYCoordinate(mBounds, drawingRect, pointY);
+//
+//            // Draw selected point background
+//            mPointCircleBackgroundPaint.setAlpha(mCurrentAlpha);
+//            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleBackgroundPaint);
+//
+//            // Draw selected point stroke
+//            mPointCircleStokePaint.setAlpha(mCurrentAlpha);
+//            mPointCircleStokePaint.setColor(pointsData.getColor());
+//            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleStokePaint);
+//        }
 
         int visibleLinesCount = mData.getYPoints().size() - mHiddenChartLines.size();
 
-        int xLabelsWidth = (int) (mHorizontalPadding * 2 + mTextPaint.measureText(mData.getXPoints().getMaxValue().getFullName()) * 1.2f);
-        int yLabelsWidth = mHorizontalPadding * 2 + visibleLinesCount * mPointTextWidth;
-        int viewWidth = Math.max(xLabelsWidth, yLabelsWidth);
-        int viewHeight = mVerticalPadding + mTextSize * 3 + mLabelVerticalPadding * 3 + mVerticalPadding;
+        int viewWidth = (int) mWidth + mHorizontalPadding * 2;
+        int viewHeight = mVerticalPadding + mTextSize * (visibleLinesCount + 1) + mLabelVerticalPadding * (visibleLinesCount + 1) + mVerticalPadding;
 
         float xPosition = xPointsPosition + mHorizontalMargin;
         float yPosition = mVerticalMargin;
@@ -219,15 +245,20 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mBackgroundBorderPaint.setAlpha(mCurrentAlpha);
         canvas.drawRoundRect(mViewRect, mCornerRadius, mCornerRadius, mBackgroundBorderPaint);
 
-        xPosition += mHorizontalPadding;
+        float leftX = xPosition + mHorizontalPadding;
+        float rightX = leftX + viewWidth - mHorizontalPadding * 2;
         yPosition += mVerticalPadding + mTextSize;
 
         // Draw X label
-        mTextPaint.setColor(mXLabelColor);
-        mTextPaint.setAlpha(mCurrentAlpha);
+        mXLabelTextPaint.setAlpha(mCurrentAlpha);
         String xLabel = mData.getXPoints().getPoints().get(mSelectedPointPosition).getFullName();
-        canvas.drawText(xLabel, xPosition, yPosition, mTextPaint);
+        canvas.drawText(xLabel, leftX, yPosition, mXLabelTextPaint);
 
+        // Draw > glyph
+        String glyph = ">";
+        canvas.drawText(glyph, rightX - mXLabelTextPaint.measureText(glyph), yPosition, mXLabelTextPaint);
+
+        mLabelTextPaint.setAlpha(mCurrentAlpha);
         // Draw Y labels
         for (int i = 0; i < mData.getYPoints().size(); i++) {
             ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
@@ -235,16 +266,16 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
             if (mHiddenChartLines.contains(pointsData.getId())) continue;
 
             // Draw axis name and axis point value
-            mTextPaint.setColor(pointsData.getColor());
-            mTextPaint.setAlpha(mCurrentAlpha);
-
-            String valueString = pointsData.getPoints().get(mSelectedPointPosition).getFullName();
-            canvas.drawText(valueString, xPosition, yPosition + mTextSize + mLabelVerticalPadding, mTextPaint);
+            mValuesTextPaint.setColor(pointsData.getColor());
+            mValuesTextPaint.setAlpha(mCurrentAlpha);
 
             String nameString = pointsData.getName();
-            canvas.drawText(nameString, xPosition, yPosition + mTextSize * 2 + mLabelVerticalPadding * 2, mTextPaint);
+            canvas.drawText(nameString, leftX, yPosition + mTextSize + mLabelVerticalPadding, mLabelTextPaint);
 
-            xPosition += mPointTextWidth;
+            String valueString = pointsData.getPoints().get(mSelectedPointPosition).getFullName();
+            canvas.drawText(valueString, rightX - mValuesTextPaint.measureText(valueString), yPosition + mTextSize + mLabelVerticalPadding, mValuesTextPaint);
+
+            yPosition += mTextSize + mLabelVerticalPadding;
         }
     }
 
@@ -261,7 +292,11 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     public void hidePointDetails(long delay) {
         mChartView.removeCallbacks(mHideTask);
-        mChartView.postDelayed(mHideTask, delay);
+        if (delay == 0) {
+            mHideTask.run();
+        } else {
+            mChartView.postDelayed(mHideTask, delay);
+        }
     }
 
     public boolean isShown() {
@@ -318,7 +353,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     public void setXLabelColor(int color) {
-        mXLabelColor = color;
+        mXLabelTextPaint.setColor(color);
+        mLabelTextPaint.setColor(color);
         mChartView.invalidate();
     }
 
