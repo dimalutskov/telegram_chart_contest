@@ -175,7 +175,6 @@ public class MainActivity extends Activity {
 
     private static ChartCheckBoxesContainer createCheckboxesContainer(Context ctx) {
         ChartCheckBoxesContainer view = new ChartCheckBoxesContainer(ctx);
-        view.setOrientation(LinearLayout.VERTICAL);
         int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
         params.topMargin = ChartUtils.getPixelForDp(ctx, 4);

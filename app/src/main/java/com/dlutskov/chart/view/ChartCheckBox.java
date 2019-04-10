@@ -25,9 +25,7 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
     // Paint for drawing checkmark
     private Paint mCheckMarkPaint;
 
-    private RectF mCheckBoxRect = new RectF();
-
-    private Rect mTextRect = new Rect();
+    private RectF mBackgroundRect = new RectF();
 
     private Path mCheckMarkPath = new Path();
 
@@ -37,6 +35,13 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
     private int mStrokeWidth;
     // Padding between checkbox icon and text
     private int mTextPadding;
+    // Left and Right padding
+    private int mHorizontalPadding;
+    // Width of checkmark icon (height will be same as textSize)
+    private int mCheckMarkWidth;
+
+    private int mFillColor;
+    private int mCheckedTextColor;
 
     private ValueAnimator mCurrentAnimator;
     private long mAnimDuration;
@@ -56,9 +61,9 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
     }
 
     private void init() {
-        mCornerRadius = ChartUtils.getPixelForDp(getContext(), 2);
-        mStrokeWidth = ChartUtils.getPixelForDp(getContext(), 2);
-        mTextPadding = ChartUtils.getPixelForDp(getContext(), 16);
+        mCornerRadius = ChartUtils.getPixelForDp(getContext(), 6);
+        mStrokeWidth = ChartUtils.getPixelForDp(getContext(), 1);
+        mTextPadding = ChartUtils.getPixelForDp(getContext(), 6);
         mAnimDuration = 320;
 
         mCheckMarkPaint = new Paint();
@@ -77,57 +82,55 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
         mFillPaint.setAntiAlias(true);
         mFillPaint.setStyle(Paint.Style.FILL);
         mFillPaint.setColor(Color.BLACK);
-    }
 
-    /**
-     * Sets checkbox icon's border and background colors
-     */
-    public void setColor(int color) {
-        mStrokePaint.setColor(color);
-        mFillPaint.setColor(color);
+        mCheckedTextColor = Color.WHITE;
+
+        mCheckMarkWidth = ChartUtils.getPixelForDp(getContext(), 14);
+        mHorizontalPadding = ChartUtils.getPixelForDp(getContext(), 4);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        int width = getMeasuredHeight() + getMeasuredWidth() + mTextPadding;
+        int width = mCheckMarkWidth + getMeasuredWidth() + mTextPadding + mHorizontalPadding * 2;
         setMeasuredDimension(width, getMeasuredHeight());
+        mCornerRadius = getMeasuredHeight() / 2;
+        mHorizontalPadding = mCornerRadius;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        int height = canvas.getHeight();
-        int iconSize = height - mStrokeWidth * 2;
-
         // Draw icon borders
-        mCheckBoxRect.set(mStrokeWidth, mStrokeWidth, iconSize, iconSize);
-        canvas.drawRoundRect(mCheckBoxRect, mCornerRadius, mCornerRadius, mStrokePaint);
+        mBackgroundRect.set(mStrokeWidth, mStrokeWidth, canvas.getWidth() - mStrokeWidth, canvas.getHeight() - mStrokeWidth);
+        canvas.drawRoundRect(mBackgroundRect, mCornerRadius, mCornerRadius, mStrokePaint);
 
         // Draw filled background
         if (mAnimationProgress > 0) {
-            int halfSize = iconSize / 2;
-            float leftTop = mStrokeWidth + halfSize * (1 - mAnimationProgress);
-            float rightBottom = halfSize + halfSize * mAnimationProgress;
-            mCheckBoxRect.set(leftTop, leftTop, rightBottom, rightBottom);
-            canvas.drawRoundRect(mCheckBoxRect, mCornerRadius, mCornerRadius, mFillPaint);
+            int halfWidth = canvas.getWidth() / 2;
+            float left = mStrokeWidth + halfWidth * (1 - mAnimationProgress);
+            float right = halfWidth + halfWidth * mAnimationProgress;
+
+            int halfHeight = canvas.getHeight() / 2;
+            float top = mStrokeWidth + halfHeight * (1 - mAnimationProgress);
+            float bottom = halfHeight + halfHeight * mAnimationProgress;
+
+            mBackgroundRect.set(left, top, right, bottom);
+            canvas.drawRoundRect(mBackgroundRect, mCornerRadius, mCornerRadius, mFillPaint);
         }
 
         // Draw CheckMark
-        float horizontalOffset = iconSize * 0.2f;
-        float verticalOffset = iconSize * 0.25f;
-        float offset = iconSize * 0.45f;
+        float spaceBetweenTextAndRect = (canvas.getHeight() - getTextSize()) * 0.75f;
         mCheckMarkPath.reset();
-        mCheckMarkPath.moveTo(mStrokeWidth + horizontalOffset, iconSize - offset);
-        mCheckMarkPath.lineTo(offset, iconSize - verticalOffset);
-        mCheckMarkPath.lineTo(iconSize - horizontalOffset, offset);
+        mCheckMarkPath.moveTo(mHorizontalPadding + mStrokeWidth, canvas.getHeight() * 0.5f);
+        mCheckMarkPath.lineTo(mHorizontalPadding + mCheckMarkWidth * 0.35f, canvas.getHeight() - spaceBetweenTextAndRect);
+        mCheckMarkPath.lineTo(mHorizontalPadding + mCheckMarkWidth, spaceBetweenTextAndRect);
         mCheckMarkPaint.setAlpha((int) (255 * mAnimationProgress));
         canvas.drawPath(mCheckMarkPath, mCheckMarkPaint);
 
         // Draw text
-        String text = getText().toString();
-        getPaint().getTextBounds(text, 0, text.length(), mTextRect);
-        int textY = height - (height - mTextRect.height()) / 2 - mStrokeWidth / 2;
-        canvas.drawText(getText().toString(), height + mTextPadding, textY, getPaint());
+        float textY = canvas.getHeight() - (canvas.getHeight() - getTextSize() * 0.8f) / 2;
+        float textXDeviation = ((mCheckMarkWidth + mTextPadding) / 2) * (1 - mAnimationProgress);
+        canvas.drawText(getText().toString(), mHorizontalPadding + mCheckMarkWidth + mTextPadding - textXDeviation, textY, getPaint());
     }
 
     @Override
@@ -135,6 +138,7 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
         if (mChecked != checked) {
             mChecked = checked;
             mAnimationProgress = mChecked ? 1 : 0;
+            getPaint().setColor(mChecked ? mCheckedTextColor : mFillColor);
             invalidate();
         }
     }
@@ -160,5 +164,18 @@ public class ChartCheckBox extends TextView implements Checkable, ValueAnimator.
     public void onAnimationUpdate(ValueAnimator animation) {
         mAnimationProgress = (float) animation.getAnimatedValue();
         invalidate();
+    }
+
+    /**
+     * Sets checkbox border, background and unchecked text colors
+     */
+    public void setColor(int color) {
+        mFillColor = color;
+        mStrokePaint.setColor(color);
+        mFillPaint.setColor(color);
+    }
+
+    public void setCheckedTextColor(int color) {
+        mCheckedTextColor = color;
     }
 }

@@ -109,10 +109,7 @@ public class AppDesign {
     }
 
     public static int textCheckBox(Theme theme) {
-        switch (theme) {
-            case NIGHT: return Color.WHITE;
-        }
-        return Color.BLACK;
+        return Color.WHITE;
     }
 
     public static void applyColorWithAnimation(int colorFrom, int colorTo, int duration, ColorUpdatePredicate predicate) {

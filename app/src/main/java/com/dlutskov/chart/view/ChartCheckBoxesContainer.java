@@ -4,8 +4,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.TypedValue;
 import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.data.ChartLinesData;
@@ -13,12 +13,11 @@ import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 
-import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 /**
  * Contains ChartCheckBox views related to collection of ChartPointsData
  */
-public class ChartCheckBoxesContainer extends LinearLayout implements View.OnClickListener, View.OnLongClickListener {
+public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClickListener, View.OnLongClickListener {
 
     /**
      * Used to notify about ChartPointsData's related checkbox state changed
@@ -34,27 +33,76 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
 
     private Listener mListener;
 
-    private int mCheckBoxTextColor = Color.BLACK;
+    private int mCheckBoxTextColor = Color.WHITE;
+
+    private int mMargin = ChartUtils.getPixelForDp(getContext(), 4);
 
     public ChartCheckBoxesContainer(Context context) {
         super(context);
+    }
+
+    @Override
+    protected void onMeasure(int widthSpec, int heightSpec) {
+        super.onMeasure(widthSpec, heightSpec);
+
+        int parentWidth = getMeasuredWidth();
+
+        int height = 0;
+        int width = 0;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (height == 0) {
+                height = child.getMeasuredHeight();
+            }
+            width += child.getMeasuredWidth() + mMargin;
+            if (width > parentWidth) {
+                // Move to new row
+                width = child.getMeasuredWidth() + mMargin;
+                height += child.getMeasuredHeight() + mMargin;
+            }
+        }
+
+        setMeasuredDimension(getMeasuredWidth(), height);
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        int parentWidth = getMeasuredWidth();
+
+        int height = 0;
+        int width = 0;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+
+            int childWidth = child.getMeasuredWidth();
+            int childHeight = child.getMeasuredHeight();
+
+            if (width + childWidth > parentWidth) {
+                // Move to new row
+                width = 0;
+                height += child.getMeasuredHeight() + mMargin;
+            }
+            int l = width == 0 ? 0 : width + mMargin;
+            int r = l + childWidth;
+            child.layout(l, height, l + childWidth, height + childHeight);
+            width = r;
+        }
+
     }
 
     public void createCheckBoxes(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
         // Clear previous views (consider caching)
         removeAllViews();
 
-        int itemTopMargin = ChartUtils.getPixelForDp(getContext(), 16);
-        int height = ChartUtils.getPixelForDp(getContext(), 24);
+        int height = ChartUtils.getPixelForDp(getContext(), 30);
         for (int i = 0; i < chartData.getYPoints().size(); i++) {
             ChartPointsData<LongCoordinate> lineData = chartData.getYPoints().get(i);
             ChartCheckBox toggleView = createToggleView(getContext());
             LayoutParams params = (LayoutParams) toggleView.getLayoutParams();
             params.height = height;
-            params.topMargin = i == 0 ? 0 : itemTopMargin;
             toggleView.setText(lineData.getName());
             toggleView.setColor(lineData.getColor());
-            toggleView.getPaint().setColor(mCheckBoxTextColor);
+            toggleView.setCheckedTextColor(mCheckBoxTextColor);
             toggleView.setTag(lineData);
             toggleView.setChecked(true);
             toggleView.setOnClickListener(this);
@@ -90,8 +138,8 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
     public void setTextColor(int textColor) {
         mCheckBoxTextColor = textColor;
         for (int i = 0; i < getChildCount(); i++) {
-            TextView view = (TextView)getChildAt(i);
-            view.getPaint().setColor(textColor);
+            ChartCheckBox view = (ChartCheckBox)getChildAt(i);
+            view.setCheckedTextColor(mCheckBoxTextColor);
             view.invalidate();
         }
     }
@@ -102,7 +150,7 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
 
     private static ChartCheckBox createToggleView(Context context) {
         ChartCheckBox checkBox = new ChartCheckBox(context);
-        LinearLayout.LayoutParams params = new LayoutParams(WRAP_CONTENT, WRAP_CONTENT);
+        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         checkBox.setLayoutParams(params);
         checkBox.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         return checkBox;
