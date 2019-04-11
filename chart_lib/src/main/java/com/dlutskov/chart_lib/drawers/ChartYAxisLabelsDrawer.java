@@ -258,12 +258,13 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         }
 
         void onDraw(Canvas canvas, Rect drawingRect) {
+            float strokeWidth = mGridPaint.getStrokeWidth();
             int part = drawingRect.height() / (mLabelsCount + 1);
             for (int i = 0; i < mLabels.size(); i++) {
                 mGridPaint.setAlpha((int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
                 float y = drawingRect.bottom - part * i;
                 y = calculateAnimatedY(y, drawingRect);
-                canvas.drawLine(drawingRect.left, y, drawingRect.right, y, mGridPaint);
+                canvas.drawLine(drawingRect.left, y - strokeWidth, drawingRect.right, y - strokeWidth, mGridPaint);
             }
         }
 

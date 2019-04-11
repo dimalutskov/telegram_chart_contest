@@ -28,6 +28,16 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     private Map<String, ValueAnimator> mPointsAnimators = new HashMap<>();
 
+    /**
+     * Index of X point which is selected now and all related Y points need to be draw as selected
+     */
+    protected int mSelectedPointIndex = -1;
+
+    /**
+     * Alpha value of selected point. Used for corresponding paint which will draw selected points
+     */
+    protected int mSelectedPointAlpha;
+
     private long mAnimDuration;
 
     protected ChartPointsDrawer(ChartView chartView) {
@@ -41,6 +51,15 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     public long getAnimDuration() {
         return mAnimDuration;
+    }
+
+    public void setSelectedPointIndex(int selectedPointIndex) {
+        mSelectedPointIndex = selectedPointIndex;
+    }
+
+    public void setSelectedPointAlpha(int alpha) {
+        mSelectedPointAlpha = alpha;
+        mChartView.invalidate();
     }
 
     @Override
@@ -131,6 +150,9 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         mChartView.invalidate();
     }
 
+    /**
+     * Handles points visibility changes
+     */
     class VisibilityAnimatorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
 
         private final P mPointsData;
@@ -151,6 +173,10 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         }
     }
 
+    /**
+     * Drawing data which is bound to specific {@link ChartPointsData} with same id
+     * Holds all required drawing options for bound points data
+     */
     protected static class DrawingData<C extends ChartCoordinate> {
 
         private final String mId;

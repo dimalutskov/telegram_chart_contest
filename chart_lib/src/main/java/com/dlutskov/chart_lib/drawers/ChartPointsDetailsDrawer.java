@@ -1,7 +1,5 @@
 package com.dlutskov.chart_lib.drawers;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -28,13 +26,8 @@ import java.util.Set;
  */
 public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartDataDrawer<X, Y> implements ValueAnimator.AnimatorUpdateListener {
 
-    public static final long DISAPPEARING_DELAY = 3000;
-
-    private final Paint mDividerPaint;
     private final Paint mBackgroundBorderPaint;
     private final Paint mBackgroundPaint;
-    private final Paint mPointCircleBackgroundPaint;
-    private final Paint mPointCircleStokePaint;
 
     private final Paint mXLabelTextPaint;
     private final Paint mLabelTextPaint;
@@ -65,9 +58,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private float mWidth; // TODO
 
-    // Radius of circle which will reflect selected points coordinates
-    private int mPointCircleRadius;
-
     // Maximum alpha value of window background
     private int mMaxBackgroundAlpha;
 
@@ -78,9 +68,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     // Index of selected x value of points which need to show
     private int mSelectedPointPosition = -1;
 
-    private ValueAnimator mAnimator;
-    private long mAlphaAnimDuration;
-
     // Alpha of all displayed object - used for appear/disappear animation
     private int mCurrentAlpha;
 
@@ -88,12 +75,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     private Set<String> mHiddenChartLines = new HashSet<>();
 
     private boolean isShown;
-
-    private Runnable mHideTask = () -> {
-        if (isShown) {
-            startAnimator(false);
-        }
-    };
 
     public ChartPointsDetailsDrawer(ChartView<X, Y> chartView) {
         super(chartView);
@@ -106,12 +87,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mVerticalPadding = ChartUtils.getPixelForDp(ctx, 6);
         mHorizontalPadding = ChartUtils.getPixelForDp(ctx, 6);
         mLabelVerticalPadding = ChartUtils.getPixelForDp(ctx, 4);
-        mPointCircleRadius = ChartUtils.getPixelForDp(ctx, 3);
 
         mMinWidth = ChartUtils.getPixelForDp(ctx, 120);
-
-        mDividerPaint = createPaint(Paint.Style.STROKE, Color.GRAY);
-        mDividerPaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 1));
 
         mBackgroundBorderPaint = createPaint(Paint.Style.STROKE, Color.BLACK);
         mBackgroundBorderPaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 1f));
@@ -128,12 +105,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mValuesTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
         mValuesTextPaint.setTextSize(mTextSize);
 
-        mPointCircleBackgroundPaint = createPaint(Paint.Style.FILL, Color.WHITE);
-        mPointCircleStokePaint = createPaint(Paint.Style.STROKE, Color.BLACK);
-        mPointCircleStokePaint.setStrokeWidth(ChartUtils.getPixelForDp(ctx, 2));
-
         mMaxBackgroundAlpha = 220;
-        mAlphaAnimDuration = 300;
     }
 
     private static Paint createPaint(Paint.Style style, int color) {
@@ -148,13 +120,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
         super.updateData(data, bounds);
         mHiddenChartLines.clear();
-        isShown = false;
-    }
-
-    @Override
-    public void updateBounds(ChartBounds<X, Y> oldBounds, ChartBounds<X, Y> newBounds) {
-        super.updateBounds(oldBounds, newBounds);
-        isShown = false;
     }
 
     @Override
@@ -165,7 +130,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         } else {
             mHiddenChartLines.add(pointsId);
         }
-        isShown = false;
     }
 
     @Override
@@ -189,13 +153,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     @Override
-    protected void onDraw(Canvas canvas, Rect drawingRect) {
-        if (!isShown) return;
-
-        float xPointsPosition = ChartUtils.calcXCoordinate(mBounds, drawingRect, mSelectedPointPosition);
-        // Draw vertical line
-        canvas.drawLine(xPointsPosition, drawingRect.top, xPointsPosition, drawingRect.bottom, mDividerPaint);
-    }
+    protected void onDraw(Canvas canvas, Rect drawingRect) {}
 
     @Override
     public void onAfterDraw(Canvas canvas, Rect drawingRect) {
@@ -204,27 +162,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         if (!isShown) return;
 
         float xPointsPosition = ChartUtils.calcXCoordinate(mBounds, drawingRect, mSelectedPointPosition);
-
-        // TODO
-//        // Draw point circles
-//        for (int i = 0; i < mData.getYPoints().size(); i++) {
-//            ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
-//
-//            if (mHiddenChartLines.contains(pointsData.getId())) continue;
-//
-//            // Calculate selected points y position
-//            Y pointY = pointsData.getPoints().get(mSelectedPointPosition);
-//            float y = ChartUtils.calcYCoordinate(mBounds, drawingRect, pointY);
-//
-//            // Draw selected point background
-//            mPointCircleBackgroundPaint.setAlpha(mCurrentAlpha);
-//            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleBackgroundPaint);
-//
-//            // Draw selected point stroke
-//            mPointCircleStokePaint.setAlpha(mCurrentAlpha);
-//            mPointCircleStokePaint.setColor(pointsData.getColor());
-//            canvas.drawCircle(xPointsPosition, y, mPointCircleRadius, mPointCircleStokePaint);
-//        }
 
         int visibleLinesCount = mData.getYPoints().size() - mHiddenChartLines.size();
 
@@ -235,7 +172,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         float yPosition = mVerticalMargin;
 
         if (xPosition + viewWidth > drawingRect.right - mHorizontalMargin) {
-            xPosition =  drawingRect.right - mHorizontalMargin - viewWidth;
+            xPosition = drawingRect.right - mHorizontalMargin - viewWidth;
         }
 
         // Draw background
@@ -279,24 +216,16 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         }
     }
 
-    public void showPointDetails(int xPointIndex) {
-        mChartView.removeCallbacks(mHideTask);
-
-        mSelectedPointPosition = xPointIndex;
-        if (isShown) {
-            mChartView.invalidate();
-        } else {
-            startAnimator(true);
-        }
+    public void setSelectedPointIndex(int pointPosition) {
+        mSelectedPointPosition = pointPosition;
     }
 
-    public void hidePointDetails(long delay) {
-        mChartView.removeCallbacks(mHideTask);
-        if (delay == 0) {
-            mHideTask.run();
-        } else {
-            mChartView.postDelayed(mHideTask, delay);
-        }
+    public void setAlpha(int alpha) {
+        mCurrentAlpha = alpha;
+    }
+
+    public void setShown(boolean show) {
+        isShown = show;
     }
 
     public boolean isShown() {
@@ -305,25 +234,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     public boolean isTouchInside(float x, float y) {
         return x >= mViewRect.left && x <= mViewRect.right && y >= mViewRect.top && y <= mViewRect.bottom;
-    }
-
-    private void startAnimator(boolean appear) {
-        if (mAnimator != null) {
-            mAnimator.cancel();
-        }
-        mAnimator = ValueAnimator.ofInt(mCurrentAlpha, appear ? 255 : 0).setDuration(mAlphaAnimDuration);
-        mAnimator.addUpdateListener(this);
-        if (!appear) {
-            mAnimator.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    isShown = false;
-                }
-            });
-        }
-        isShown = true;
-        mAnimator.start();
     }
 
     @Override
@@ -339,16 +249,6 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     public void setBackgroundBorderColor(int color) {
         mBackgroundBorderPaint.setColor(color);
-        mChartView.invalidate();
-    }
-
-    public void setDividerColor(int color) {
-        mDividerPaint.setColor(color);
-        mChartView.invalidate();
-    }
-
-    public void setPointCircleBackground(int color) {
-        mPointCircleBackgroundPaint.setColor(color);
         mChartView.invalidate();
     }
 

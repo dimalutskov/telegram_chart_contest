@@ -10,7 +10,9 @@ import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
@@ -92,7 +94,12 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
 
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
-                    mChartView.getPointsDetailsDrawer().setPointCircleBackground(updatedColor);
+                    ChartPointsDrawer pointsDrawer = mChartView.getPointsDrawer();
+                    if (pointsDrawer instanceof ChartBarsDrawer) {
+                        ((ChartBarsDrawer) pointsDrawer).setCoverColor(updatedColor);
+                    } else if (pointsDrawer instanceof ChartLinesDrawer) {
+                        ((ChartLinesDrawer) pointsDrawer).setSelectedPointCircleBackground(updatedColor);
+                    }
                     mChartView.getXLabelsDrawer().setBackgroundColor(updatedColor);
                 });
 
@@ -100,7 +107,10 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
                 AppDesign.chartGridColor(curTheme), duration, updatedColor -> {
                     mChartView.getYLabelsDrawer().setGridColor(updatedColor);
                     mChartView.getPointsDetailsDrawer().setBackgroundBorderColor(updatedColor);
-                    mChartView.getPointsDetailsDrawer().setDividerColor(updatedColor);
+                    ChartPointsDrawer pointsDrawer = mChartView.getPointsDrawer();
+                    if (pointsDrawer instanceof ChartLinesDrawer) {
+                        ((ChartLinesDrawer) pointsDrawer).setSelectedPointsDividerColor(updatedColor);
+                    }
                 });
 
         AppDesign.applyColorWithAnimation(AppDesign.textColorChartLabels(prevTheme),

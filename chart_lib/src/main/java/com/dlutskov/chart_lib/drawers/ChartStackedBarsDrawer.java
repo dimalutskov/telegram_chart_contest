@@ -9,7 +9,7 @@ import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 
-public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartLinesDrawer<X, Y> {
+public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartBarsDrawer<X, Y> {
 
     public ChartStackedBarsDrawer(ChartView chartView) {
         super(chartView);
@@ -55,11 +55,4 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
         }
     }
 
-    @Override
-    protected void onVisibilityAnimatorUpdate(DrawingData<Y> pointsData, int alpha) {
-        pointsData.setAlpha(alpha);
-        // Do not change paint's alpha for this drawer - bars size will be reduced according to disappearance progress
-        mChartView.invalidate();
-        invalidate();
-    }
 }

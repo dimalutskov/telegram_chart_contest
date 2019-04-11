@@ -104,4 +104,9 @@ public class ChartScaledLinesDrawer<X extends ChartCoordinate, Y extends ChartCo
             });
         }
     }
+
+    @Override
+    ChartBounds<X, Y> getSelectedPointsBounds(String pointsId) {
+        return mLineBounds.get(pointsId);
+    }
 }

@@ -185,6 +185,10 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         mBounds.update(minXIndex, maxXIndex, mYBoundsPair.first, mYBoundsPair.second);
     }
 
+    public ChartPointsDrawer<X, Y, ?> getPointsDrawer() {
+        return mPointsDrawer;
+    }
+
     public void setPointsDrawer(ChartPointsDrawer<X, Y, ?> pointsDrawer) {
         mPointsDrawer = pointsDrawer;
         invalidate();

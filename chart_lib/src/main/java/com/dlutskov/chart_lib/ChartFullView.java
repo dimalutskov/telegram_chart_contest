@@ -1,5 +1,8 @@
 package com.dlutskov.chart_lib;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Rect;
 import android.view.GestureDetector;
@@ -24,9 +27,22 @@ import com.dlutskov.chart_lib.utils.ChartUtils;
  */
 public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>  extends ChartView<X, Y> {
 
+    public static final long POINTS_DETAILS_DISAPPEARING_DELAY = 3000;
+
     private ChartXAxisLabelsDrawer<X, Y> mXAxisLabelsDrawer;
     private ChartYAxisLabelsDrawer<X, Y> mYAxisLabelsDrawer;
     private ChartPointsDetailsDrawer<X, Y> mPointsDetailsDrawer;
+
+    private ValueAnimator mPointsDetailsAnimator;
+    private int mPointsDetailsXIndex = -1;
+    private int mPointsDetailsAlpha;
+    private long mPointsDetailsAnimDuration;
+
+    private Runnable mHidePointsDetailsTask = () -> {
+        if (mPointsDetailsAlpha != 0) {
+            startPointsDetailsAnimator(false);
+        }
+    };
 
     private GestureDetector mGestureDetector = new GestureDetector(new GestureDetectorListener());
 
@@ -50,12 +66,26 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     @Override
+    public void updateHorizontalBounds(int minXIndex, int maxXIndex) {
+        super.updateHorizontalBounds(minXIndex, maxXIndex);
+        if (mPointsDetailsXIndex > 0 && (mPointsDetailsXIndex < minXIndex || mPointsDetailsXIndex > maxXIndex)) {
+            removeCallbacks(mHidePointsDetailsTask);
+            mPointsDetailsAlpha = 0;
+            mPointsDrawer.setSelectedPointAlpha(mPointsDetailsAlpha);
+            mPointsDetailsDrawer.setAlpha(mPointsDetailsAlpha);
+            mPointsDetailsDrawer.setShown(false);
+        }
+    }
+
+    @Override
     protected void init() {
         super.init();
         mXAxisLabelsDrawer = new ChartXAxisLabelsDrawer<>(this, ChartUtils.getPixelForDp(getContext(), 32));
         mYAxisLabelsDrawer = new ChartYAxisLabelsDrawer<>(this, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
         mYAxisLabelsDrawer.setDrawOverPoints(true);
         mPointsDetailsDrawer = new ChartPointsDetailsDrawer<>(this);
+
+        mPointsDetailsAnimDuration = 300;
 
         ViewConfiguration vc = ViewConfiguration.get(getContext());
         mTouchSlop = vc.getScaledTouchSlop();
@@ -111,14 +141,14 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                 }
                 if (mShowPointsDetailsOnTouch && isTouchIntercepted) {
                     int xIndex = mBounds.getMinXIndex() + Math.round((x / mDrawingRect.width()) * mBounds.getXPointsCount());
-                    mPointsDetailsDrawer.showPointDetails(xIndex);
+                    showPointsDetails(xIndex);
                     disableParentTouch();
                 }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (mPointsDetailsDrawer.isShown()) {
-                    mPointsDetailsDrawer.hidePointDetails(ChartPointsDetailsDrawer.DISAPPEARING_DELAY);
+                    hidePointsDetails(POINTS_DETAILS_DISAPPEARING_DELAY);
                 }
                 isTouchIntercepted = false;
                 mShowPointsDetailsOnTouch = true;
@@ -133,6 +163,53 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         if (parent != null) {
             parent.requestDisallowInterceptTouchEvent(true);
         }
+    }
+
+    private void showPointsDetails(int xIndex) {
+        removeCallbacks(mHidePointsDetailsTask);
+
+        mPointsDetailsXIndex = xIndex;
+        mPointsDrawer.setSelectedPointIndex(xIndex);
+        mPointsDetailsDrawer.setSelectedPointIndex(xIndex);
+        if (mPointsDetailsAlpha > 0 || (mPointsDetailsAnimator != null && mPointsDetailsAnimator.isRunning())) {
+            invalidate();
+        } else {
+            startPointsDetailsAnimator(true);
+        }
+    }
+
+    private void hidePointsDetails(long delay) {
+        removeCallbacks(mHidePointsDetailsTask);
+
+        if (delay == 0) {
+            mHidePointsDetailsTask.run();
+        } else {
+            postDelayed(mHidePointsDetailsTask, delay);
+        }
+    }
+
+    private void startPointsDetailsAnimator(boolean appear) {
+        if (mPointsDetailsAnimator != null) {
+            mPointsDetailsAnimator.cancel();
+        }
+        mPointsDetailsAnimator = ValueAnimator.ofInt(mPointsDetailsAlpha, appear ? 255 : 0).setDuration(mPointsDetailsAnimDuration);
+        mPointsDetailsAnimator.addUpdateListener(animation -> {
+            mPointsDetailsAlpha = (int) animation.getAnimatedValue();
+            mPointsDrawer.setSelectedPointAlpha(mPointsDetailsAlpha);
+            mPointsDetailsDrawer.setAlpha(mPointsDetailsAlpha);
+            invalidate();
+        });
+        if (!appear) {
+            mPointsDetailsAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    mPointsDetailsDrawer.setShown(false);
+                }
+            });
+        }
+        mPointsDetailsDrawer.setShown(true);
+        mPointsDetailsAnimator.start();
     }
 
     public ChartXAxisLabelsDrawer<X, Y> getXLabelsDrawer() {
@@ -185,10 +262,14 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         @Override
         public boolean onSingleTapUp(MotionEvent e) {
             if (mDetectClickOnPointsDetails && mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(e.getX(), e.getY())) {
-                mPointsDetailsDrawer.hidePointDetails(0);
+                hidePointsDetails(0);
             } else {
-                int xIndex = mBounds.getMinXIndex() + Math.round((e.getX() / mDrawingRect.width()) * mBounds.getXPointsCount());
-                mPointsDetailsDrawer.showPointDetails(xIndex);
+                if (mPointsDetailsDrawer.isShown()) {
+                    hidePointsDetails(0);
+                } else {
+                    int xIndex = mBounds.getMinXIndex() + Math.round((e.getX() / mDrawingRect.width()) * mBounds.getXPointsCount());
+                    showPointsDetails(xIndex);
+                }
             }
             return super.onSingleTapUp(e);
         }
