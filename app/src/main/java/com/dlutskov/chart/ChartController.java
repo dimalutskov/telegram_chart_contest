@@ -9,6 +9,7 @@ import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
+import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 
 public class ChartController implements ChartPreviewView.Listener, ChartCheckBoxesContainer.Listener  {
@@ -65,7 +66,11 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
                 mChartView.setPointsDrawer(new ChartBarsDrawer<>(mChartView));
                 mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
             }
+        } else if (chartData.isYScaled()) {
+            mChartView.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartView));
+            mChartPreview.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartPreview));
         }
+        // Lines drawers will be used by default
     }
 
     void applyCurrentColors(AppDesign.Theme curTheme, boolean animate) {

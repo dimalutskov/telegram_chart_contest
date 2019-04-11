@@ -1,8 +1,7 @@
 package com.dlutskov.chart_lib.data;
 
-import android.util.Pair;
-
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
+import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.List;
 

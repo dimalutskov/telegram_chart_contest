@@ -63,6 +63,10 @@ public abstract class ChartDataDrawer<X extends ChartCoordinate, Y extends Chart
         return mBounds;
     }
 
+    ChartLinesData<X, Y> getData() {
+        return mData;
+    }
+
     public void updatePointsVisibility(String pointsId, boolean visibility) {}
 
     /**

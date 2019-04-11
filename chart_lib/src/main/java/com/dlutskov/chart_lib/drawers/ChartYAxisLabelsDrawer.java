@@ -12,6 +12,7 @@ import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
+import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.List;
  * @param <Y> type of Y axis chart coordinates
  */
 public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartAxisLabelsDrawer<X, Y>
-        implements BoundsUpdateAnimator.Listener<X, Y> {
+        implements BoundsUpdateAnimator.Listener<Y> {
 
     public static final int SIDE_LEFT = -1;
     public static final int SIDE_RIGHT = 1;
@@ -89,8 +90,8 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
                 return;
             } else {
                 // Use currently animated bounds
-                currentBounds.setMinY(mBoundsAnimHandler.getCurrentBounds().getMinY());
-                currentBounds.setMaxY(mBoundsAnimHandler.getCurrentBounds().getMaxY());
+                currentBounds.setMinY(mBoundsAnimHandler.getCurrentYBounds().first);
+                currentBounds.setMaxY(mBoundsAnimHandler.getCurrentYBounds().second);
                 // Cancel previously started animator
                 mBoundsAnimHandler.cancel();
             }
@@ -179,11 +180,14 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void onBoundsAnimationUpdated(ChartBounds bounds, float updateProgress) {
-        super.updateBounds(bounds, bounds);
-        mCurrentLabelsAlpha = (int) (200 * (1 - updateProgress));
+    public void onBoundsAnimationUpdated(Pair<Y, Y> yBounds, float updateProgress) {
+        getBounds().setMinY(yBounds.first);
+        getBounds().setMaxY(yBounds.second);
+        invalidate();
+        mChartView.invalidate();
 
-        if (mTargetBounds != null && mTargetBounds.isYBoundsEquals(bounds)) {
+        mCurrentLabelsAlpha = (int) (200 * (1 - updateProgress));
+        if (mTargetBounds != null && mTargetBounds.isYBoundsEquals(getBounds())) {
             mCurrentLabels = mTargetLabels;
             mCurrentLabelsAlpha = 255;
             mTargetLabels = new ArrayList<>();

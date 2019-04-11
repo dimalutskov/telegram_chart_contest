@@ -11,6 +11,7 @@ import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.utils.ChartUtils;
+import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import java.util.Map;
 
 public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate, P extends ChartPointsDrawer.DrawingData<Y>>
         extends ChartDataDrawer<X, Y>
-        implements BoundsUpdateAnimator.Listener<X, Y> {
+        implements BoundsUpdateAnimator.Listener<Y> {
 
     protected final List<P> drawingDataList = new ArrayList<>();
 
@@ -36,6 +37,10 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     public void setAnimDuration(long animDuration) {
         mAnimDuration = animDuration;
+    }
+
+    public long getAnimDuration() {
+        return mAnimDuration;
     }
 
     @Override
@@ -56,14 +61,13 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         super.updateBounds(currentBounds, currentBounds);
 
         if (mBoundsAnimHandler != null) {
-            mBoundsAnimHandler.updateXBounds(targetBounds.getMinXIndex(), targetBounds.getMaxXIndex());
             if (mBoundsAnimHandler.isTargetTheSame(targetBounds)) {
                 // No need to update y bounds animator already running to move to same target
                 return;
             } else {
                 // Use currently animated bounds
-                currentBounds.setMinY(mBoundsAnimHandler.getCurrentBounds().getMinY());
-                currentBounds.setMaxY(mBoundsAnimHandler.getCurrentBounds().getMaxY());
+                currentBounds.setMinY(mBoundsAnimHandler.getCurrentYBounds().first);
+                currentBounds.setMaxY(mBoundsAnimHandler.getCurrentYBounds().second);
                 // Cancel previously started animator
                 mBoundsAnimHandler.cancel();
             }
@@ -107,8 +111,11 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     }
 
     @Override
-    public void onBoundsAnimationUpdated(ChartBounds<X, Y> bounds, float updateProgress) {
-        super.updateBounds(bounds, bounds);
+    public void onBoundsAnimationUpdated(Pair<Y, Y> yBounds, float updateProgress) {
+        getBounds().setMinY(yBounds.first);
+        getBounds().setMaxY(yBounds.second);
+        invalidate();
+        mChartView.invalidate();
     }
 
     protected P findDrawingData(String pointsId) {

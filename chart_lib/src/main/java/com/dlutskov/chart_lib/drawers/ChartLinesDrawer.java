@@ -40,13 +40,17 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
     }
 
     @Override
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
+        super.updateData(data, bounds);
+        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
+            this.drawingDataList.add(new DrawingData<>(pointsData, mLineStrokeWidth));
+        }
+    }
+
+    @Override
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-            if (drawingData == null) {
-                drawingData = new DrawingData<>(pointsData, mLineStrokeWidth);
-                this.drawingDataList.add(drawingData);
-            }
             if (!drawingData.isVisible()) continue;
 
             buildLines(drawingData.mLines, pointsData.getPoints(), bounds, drawingRect);
@@ -63,7 +67,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
         }
     }
 
-    private void buildLines(float lines[], List<Y> yPoints, ChartBounds<X, Y> bounds, Rect drawingRect) {
+    void buildLines(float lines[], List<Y> yPoints, ChartBounds<X, Y> bounds, Rect drawingRect) {
         int lineIndex = 0;
         for (int i = bounds.getMinXIndex(); i < bounds.getMaxXIndex(); i++) { // TODO
             float x = ChartUtils.calcXCoordinate(bounds, drawingRect, i);
