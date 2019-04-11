@@ -5,12 +5,15 @@ import com.dlutskov.chart.view.ChartCheckBoxesContainer;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
+import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
 import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
+import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
 import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
 
 public class ChartController implements ChartPreviewView.Listener, ChartCheckBoxesContainer.Listener  {
 
@@ -49,13 +52,10 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
     }
 
     private void initChartDrawers(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
-        if (chartData.isStacked()) {
-            mChartView.setMinYValue(LongCoordinate.valueOf(0));
-            mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
-        }
-
         String chartType = chartData.getYPoints().get(0).getType();
         if (chartType.equals(ChartData.CHART_TYPE_BAR) || chartType.equals(ChartData.CHART_TYPE_AREA)) {
+            mChartView.setMinYValue(LongCoordinate.valueOf(0));
+            mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
             if (chartData.isPercentage()) {
                 mChartView.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartView));
                 mChartPreview.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartPreview));
@@ -67,8 +67,20 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
                 mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
             }
         } else if (chartData.isYScaled()) {
-            mChartView.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartView));
             mChartPreview.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartPreview));
+            mChartView.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartView));
+
+            // Bind yLabelsDrawer to first graph
+            ChartPointsData<LongCoordinate> firstGraph = mChartData.getOverviewData().getYPoints().get(0);
+            mChartView.getYLabelsDrawer().setScaledPointsId(firstGraph.getId(), firstGraph.getColor());
+
+            // Create yLabelsDrawer for the second graph
+            ChartYAxisLabelsDrawer yRightLabelsDrawer = new ChartYAxisLabelsDrawer(mChartView, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
+            yRightLabelsDrawer.setSide(ChartYAxisLabelsDrawer.SIDE_RIGHT);
+            // TODO Theme update color
+            ChartPointsData<LongCoordinate> secondGraph = mChartData.getOverviewData().getYPoints().get(1);
+            yRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
+            mChartView.addDrawer(yRightLabelsDrawer);
         }
         // Lines drawers will be used by default
     }

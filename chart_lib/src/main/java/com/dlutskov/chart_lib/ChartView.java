@@ -167,6 +167,14 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     private void calculateCurrentBounds(int minXIndex, int maxXIndex) {
+        if (mBounds.getMinY() != null && mBounds.getMaxY() != null && mLinesData.isYScaled()) {
+            // For scaled graphs - each drawer will calculate local bounds for related graph
+            // No need to calculate common Y bounds
+            mBounds.setMinXIndex(minXIndex);
+            mBounds.setMaxXIndex(maxXIndex);
+            return;
+        }
+
         mYBoundsPair = mLinesData.calculateYBounds(minXIndex, maxXIndex, mHiddenChartLines, mYBoundsPair);
         if (mMinYValue != null && mMinYValue.compareTo(mYBoundsPair.first) < 0) {
             mYBoundsPair.first = mMinYValue;

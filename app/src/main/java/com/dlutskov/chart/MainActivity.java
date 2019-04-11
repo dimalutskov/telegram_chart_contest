@@ -98,6 +98,11 @@ public class MainActivity extends Activity {
 
     private void createChartControllers( List<ChartData> chartDataList, ViewGroup chartsContainer) {
         int margin = ChartUtils.getPixelForDp(this, PADDING_GENERAL * 2);
+
+        View spaceView = new View(this);
+        spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin / 2));
+        chartsContainer.addView(spaceView);
+
         for (ChartData chartData : chartDataList) {
             // Chart Full View
             ChartFullView<DateCoordinate, LongCoordinate> chartView = createChartFullView(this);
@@ -109,7 +114,7 @@ public class MainActivity extends Activity {
             ChartCheckBoxesContainer checkboxesContainer = createCheckboxesContainer(this);
             chartsContainer.addView(checkboxesContainer);
 
-            View spaceView = new View(this);
+            spaceView = new View(this);
             spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin));
             chartsContainer.addView(spaceView);
 
@@ -127,7 +132,6 @@ public class MainActivity extends Activity {
         int padding = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
         containerView.setPadding(padding, 0, padding, 0);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, headerHeight);
-        params.bottomMargin = padding;
         containerView.setLayoutParams(params);
 
         TextView titleView = new TextView(ctx);

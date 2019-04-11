@@ -2,12 +2,14 @@ package com.dlutskov.chart_lib.drawers;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
 import com.dlutskov.chart_lib.ChartBounds;
+import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
@@ -22,34 +24,43 @@ import java.util.List;
  * @param <X> type of x axis chart coordinates
  * @param <Y> type of Y axis chart coordinates
  */
-public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartAxisLabelsDrawer<X, Y>
-        implements BoundsUpdateAnimator.Listener<Y> {
+public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartAxisLabelsDrawer<X, Y> {
 
+    // Max disappearing animated labels collections count
+    private static final int MAX_DISAPPEARING_LABELS_SIZE = 1;
+
+    // Part of drawing rect height which will be used for translate animations
+    private static final float TRANSITION_RATIO = 0.25f;
+
+    // Displaying on the drawing area sides constants
     public static final int SIDE_LEFT = -1;
     public static final int SIDE_RIGHT = 1;
 
-    // Labels which reflects current chart's bounds
-    private List<DrawnLabel<Y>> mCurrentLabels = new ArrayList<>();
+    private List<LabelsAnimatorHandler> mLabelsDisappearAnimators = new ArrayList<>();
+    private LabelsAnimatorHandler mLabelsAppearAnimator;
 
-    // Labels which reflects new chart's bounds which is used when bounds updated to animate
-    // transition from current labels to target
-    private List<DrawnLabel<Y>> mTargetLabels = new ArrayList<>();
-
-    private ChartBounds<X, Y> mTargetBounds;
-    private BoundsUpdateAnimator<X, Y> mBoundsAnimHandler;
-
-    private int mCurrentLabelsAlpha = 255;
+    private ChartBounds<X, Y> mLastBounds;
 
     // Dividers paint
     private Paint mGridPaint;
     // Padding between divider and label
     private int mGridPadding;
 
+    // Reflects whether need to draw label dividers
+    private boolean mDrawGrid = true;
+
     // Side where the labels will be drawn (-1 - left side, 1 - right side)
     private int mSide = SIDE_LEFT;
 
-    // Reflects whether need to rebuild target bounds on next rebuild callback
-    private boolean rebuildTargetBounds;
+    // - 1 From bottom to top, 1 - from top to bottom
+    private int mLastBoundsAppearanceDirection;
+
+    /**
+     * Used for scaled charts where each line has separated bounds. If this param is specified - labels will be
+     * calculated for bounds which corresponds to this points only. By default is null - labels will be calculated
+     * for common chart's bounds
+     */
+    private String mScaledPointsId;
 
     private long mAnimDuration = ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION;
 
@@ -67,73 +78,76 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
     @Override
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
-        mCurrentLabels.clear();
-        mTargetLabels.clear();
-        mCurrentLabelsAlpha = 255;
-        if (mBoundsAnimHandler != null) {
-            mBoundsAnimHandler.cancel();
+        if (mScaledPointsId != null) {
+            // Drawer is related to specific points - so need to calculate bounds only for this points
+            bounds = calculateScaledBounds(bounds, data);
         }
+        super.updateData(data, bounds);
     }
 
     @Override
     public void updateBounds(ChartBounds<X, Y> currentBounds, ChartBounds<X, Y> targetBounds) {
-        if (targetBounds.isYBoundsEquals(currentBounds)) {
+        if (mScaledPointsId != null) {
+            // Drawer is related to specific points - so need to calculate bounds only for this points
+            targetBounds = calculateScaledBounds(targetBounds, getData());
+        }
+
+        // Ignore if Y bounds were not changed
+        if (targetBounds.isYBoundsEquals(currentBounds) ||
+                (mScaledPointsId != null && mLastBounds != null && mLastBounds.isYBoundsEquals(targetBounds))) {
             return;
         }
-        mTargetBounds = new ChartBounds<>(targetBounds);
-        rebuildTargetBounds = true;
 
-        if (mBoundsAnimHandler != null) {
-            if (mBoundsAnimHandler.isTargetTheSame(targetBounds)) {
-                // No need to update y bounds animator already running to move to same target
-                return;
-            } else {
-                // Use currently animated bounds
-                currentBounds.setMinY(mBoundsAnimHandler.getCurrentYBounds().first);
-                currentBounds.setMaxY(mBoundsAnimHandler.getCurrentYBounds().second);
-                // Cancel previously started animator
-                mBoundsAnimHandler.cancel();
+        mLastBoundsAppearanceDirection = targetBounds.getMaxY().compareTo(currentBounds.getMaxY()) < 0 ? -1 : 1;
+        updateBoundsInternal(targetBounds);
+        mLastBounds = targetBounds;
+    }
+
+    private ChartBounds<X, Y> calculateScaledBounds(ChartBounds<X, Y> bounds, ChartLinesData<X, Y> data) {
+        // Drawer is related to specific points - so need to calculate bounds only for this points
+        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
+            if (pointsData.getId().equals(mScaledPointsId)) {
+                Pair<Integer, Integer> yBounds = ChartPointsData.calculateMinMaxIndexes(pointsData, bounds.getMinXIndex(), bounds.getMaxXIndex());
+                bounds = new ChartBounds<>(bounds);
+                bounds.setMinY(pointsData.getPoints().get(yBounds.first));
+                bounds.setMaxY(pointsData.getPoints().get(yBounds.second));
+                break;
             }
         }
-        mBoundsAnimHandler = new BoundsUpdateAnimator<>(currentBounds, targetBounds, this);
-        mBoundsAnimHandler.start(mAnimDuration, new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                mBoundsAnimHandler = null;
-            }
-        });
+        return bounds;
     }
 
     @Override
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
         // Build current labels
-        if (mCurrentLabels.isEmpty()) {
-            buildLabels(mCurrentLabels, bounds, drawingRect);
+        if (mLabelsAppearAnimator == null) {
+            mLabelsAppearAnimator = new LabelsAnimatorHandler(buildLabels(bounds, drawingRect), mLastBoundsAppearanceDirection, true);
+            mLabelsAppearAnimator.start(0, null);
         } else {
-            for (int i = 0; i < mCurrentLabels.size(); i++) {
-                DrawnLabel<Y> label = mCurrentLabels.get(i);
-                label.x = getLabelXCoordinate(label, drawingRect);
-                label.y = ChartUtils.calcYCoordinate(bounds, drawingRect, label.value);
-            }
-        }
-        // Build target labels if bounds were updated
-        if (mTargetBounds != null) {
-            if (rebuildTargetBounds) {
-                rebuildTargetBounds = false;
-                buildLabels(mTargetLabels, mTargetBounds, drawingRect);
+            // Disappear previous labels
+            LabelsAnimatorHandler animatorHandler = new LabelsAnimatorHandler(mLabelsAppearAnimator.mLabels, mLastBoundsAppearanceDirection, false);
+            if (mLabelsDisappearAnimators.size() == MAX_DISAPPEARING_LABELS_SIZE) {
+                mLabelsDisappearAnimators.set(0, animatorHandler);
             } else {
-                for (int i = 0; i < mTargetLabels.size(); i++) {
-                    DrawnLabel<Y> label = mTargetLabels.get(i);
-                    label.x = getLabelXCoordinate(label, drawingRect);
-                    label.y = ChartUtils.calcYCoordinate(bounds, drawingRect, label.value);
-                }
+                mLabelsDisappearAnimators.add(animatorHandler);
             }
+            animatorHandler.start(mAnimDuration, new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    mLabelsDisappearAnimators.remove(animatorHandler);
+                }
+            });
+            // Appear new labels
+            mLabelsAppearAnimator.cancel();
+            mLabelsAppearAnimator = new LabelsAnimatorHandler(buildLabels(bounds, drawingRect), 1, true);
+            mLabelsAppearAnimator.start(mAnimDuration, null);
         }
     }
 
-    private void buildLabels(List<DrawnLabel<Y>> labels, ChartBounds<X, Y> bounds, Rect drawingRect) {
-        labels.clear();
+    private List<DrawnLabel<Y>> buildLabels(ChartBounds<X, Y> bounds, Rect drawingRect) {
+        // TODO proper values!!!
+        List<DrawnLabel<Y>> labels = new ArrayList<>();
         // As label has own size - last label need to be drawn not at the top point
         float heightToLastLabel = (drawingRect.height()  - mTextSize - mGridPadding);
         Y maxLabelValue = (Y) bounds.getMinY().add(bounds.getMinY().distanceTo(bounds.getMaxY())
@@ -143,24 +157,20 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         for (int i = 0; i <= mLabelsCount; i++) {
             String label = currentValue.getAxisName();
             DrawnLabel<Y> drawnLabel = new DrawnLabel(currentValue, label);
-            drawnLabel.x = getLabelXCoordinate(drawnLabel, drawingRect);
-            drawnLabel.y = ChartUtils.calcYCoordinate(bounds, drawingRect, currentValue);
             labels.add(drawnLabel);
             currentValue = (Y) currentValue.add(step);
         }
+        return labels;
     }
 
     @Override
     public void onDraw(Canvas canvas, Rect drawingRect) {
-        // Draws grid for current labels
-        for (DrawnLabel label : mCurrentLabels) {
-            mGridPaint.setAlpha(mCurrentLabelsAlpha);
-            canvas.drawLine(drawingRect.left, label.y, drawingRect.right, label.y, mGridPaint);
-        }
-        // Draws grid for targeting labels
-        for (DrawnLabel label : mTargetLabels) {
-            mGridPaint.setAlpha(255 - mCurrentLabelsAlpha);
-            canvas.drawLine(drawingRect.left, label.y, drawingRect.right, label.y, mGridPaint);
+        if (mDrawGrid) {
+            // Draws grid for current labels
+            mLabelsAppearAnimator.onDraw(canvas, drawingRect);
+            for (LabelsAnimatorHandler animatorHandler : mLabelsDisappearAnimators) {
+                animatorHandler.onDraw(canvas, drawingRect);
+            }
         }
     }
 
@@ -168,36 +178,27 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     public void onAfterDraw(Canvas canvas, Rect drawingRect) {
         super.onAfterDraw(canvas, drawingRect);
         // Draws current labels text
-        for (DrawnLabel label : mCurrentLabels) {
-            mLabelPaint.setAlpha(mCurrentLabelsAlpha);
-            canvas.drawText(label.text, label.x, label.y - mGridPadding, mLabelPaint);
-        }
-        // Draws targeting labels text
-        for (DrawnLabel label : mTargetLabels) {
-            mLabelPaint.setAlpha(255 - mCurrentLabelsAlpha);
-            canvas.drawText(label.text, label.x, label.y - mGridPadding, mLabelPaint);
+        mLabelsAppearAnimator.onAfterDraw(canvas, drawingRect);
+        for (LabelsAnimatorHandler animatorHandler : mLabelsDisappearAnimators) {
+            animatorHandler.onAfterDraw(canvas, drawingRect);
         }
     }
 
     @Override
-    public void onBoundsAnimationUpdated(Pair<Y, Y> yBounds, float updateProgress) {
-        getBounds().setMinY(yBounds.first);
-        getBounds().setMaxY(yBounds.second);
-        invalidate();
-        mChartView.invalidate();
-
-        mCurrentLabelsAlpha = (int) (200 * (1 - updateProgress));
-        if (mTargetBounds != null && mTargetBounds.isYBoundsEquals(getBounds())) {
-            mCurrentLabels = mTargetLabels;
-            mCurrentLabelsAlpha = 255;
-            mTargetLabels = new ArrayList<>();
-            mTargetBounds = null;
+    public void setTextColor(int textColor) {
+        // If scaled points specified - points will be the same as points color
+        if (mScaledPointsId == null) {
+            super.setTextColor(textColor);
         }
     }
 
     public void setGridColor(int color) {
         mGridPaint.setColor(color);
         mChartView.invalidate();
+    }
+
+    public void setDrawGrid(boolean drawGrid) {
+        mDrawGrid = drawGrid;
     }
 
     public void setGridStrokeWidth(int strokeWidth) {
@@ -214,6 +215,11 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         mSide = side;
     }
 
+    public void setScaledPointsId(String pointsId, int color) {
+        mScaledPointsId = pointsId;
+        super.setTextColor(color);
+    }
+
     private float getLabelXCoordinate(DrawnLabel label, Rect drawingRect) {
         if (mSide == SIDE_RIGHT) {
             return drawingRect.right - mLabelPaint.measureText(label.text);
@@ -226,11 +232,91 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     private static class DrawnLabel<C extends ChartCoordinate> {
         final C value;
         final String text;
-        float y;
-        float x;
         DrawnLabel(C value, String text) {
             this.text = text;
             this.value = value;
         }
     }
+
+    /**
+     * Handles labels transition animations - from to to bottom or vice versa
+     * according to y bounds changes
+     */
+    private class LabelsAnimatorHandler implements ValueAnimator.AnimatorUpdateListener {
+
+        private final List<DrawnLabel<Y>> mLabels;
+        private final int mAnimationDirection;
+        private final boolean mAppear;
+
+        private ValueAnimator mAnimator;
+        private float mAnimatorProgress;
+
+        LabelsAnimatorHandler(List<DrawnLabel<Y>> labels, int direction, boolean appear) {
+            mLabels = labels;
+            mAnimationDirection = direction;
+            mAppear = appear;
+        }
+
+        void onDraw(Canvas canvas, Rect drawingRect) {
+            int part = drawingRect.height() / (mLabelsCount + 1);
+            for (int i = 0; i < mLabels.size(); i++) {
+                mGridPaint.setAlpha((int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
+                float y = drawingRect.bottom - part * i;
+                y = calculateAnimatedY(y, drawingRect);
+                canvas.drawLine(drawingRect.left, y, drawingRect.right, y, mGridPaint);
+            }
+        }
+
+        void onAfterDraw(Canvas canvas, Rect drawingRect) {
+            int part = drawingRect.height() / (mLabelsCount + 1);
+            for (int i = 0; i < mLabels.size(); i++) {
+                DrawnLabel<Y> label = mLabels.get(i);
+                mLabelPaint.setAlpha((int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
+                float x = getLabelXCoordinate(label, drawingRect);
+                float y = drawingRect.bottom - part * i;
+                y = calculateAnimatedY(y, drawingRect);
+                canvas.drawText(label.text, x, y - mGridPadding, mLabelPaint);
+            }
+        }
+
+        private float calculateAnimatedY(float y, Rect drawingRect) {
+            if (mAppear) {
+                if (mLastBoundsAppearanceDirection < 0) {
+                    y = y + drawingRect.height() * TRANSITION_RATIO * (1 - mAnimatorProgress);
+                } else {
+                    y = y - drawingRect.height() * TRANSITION_RATIO * (1 - mAnimatorProgress);
+                }
+            } else {
+                if (mAnimationDirection < 0) {
+                    y = y - drawingRect.height() * TRANSITION_RATIO * mAnimatorProgress;
+                } else {
+                    y = y + drawingRect.height()  * TRANSITION_RATIO * mAnimatorProgress;
+                }
+            }
+            return y;
+        }
+
+        void start(long duration, Animator.AnimatorListener listener) {
+            mAnimator = ValueAnimator.ofFloat(0f, 1f);
+            mAnimator.setDuration(duration);
+            mAnimator.addUpdateListener(this);
+            if (listener != null) {
+                mAnimator.addListener(listener);
+            }
+            mAnimator.start();
+        }
+
+        void cancel() {
+            if (mAnimator != null) {
+                mAnimator.cancel();
+            }
+        }
+
+        @Override
+        public void onAnimationUpdate(ValueAnimator animation) {
+            mAnimatorProgress = (float) animation.getAnimatedValue();
+            mChartView.invalidate();
+        }
+    }
+
 }
