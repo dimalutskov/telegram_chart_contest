@@ -19,6 +19,14 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
         int pointsCount = bounds.getMaxXIndex() - bounds.getMinXIndex();
         int columnWidth = drawingRect.width() / pointsCount;
+        // Adjust columnWidth to get rid of gaps between bars
+        int columnWidthAdjustment = (drawingRect.width() % pointsCount) / pointsCount + 2;
+
+        // Set column widths
+        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
+            DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
+            drawingData.paint.setStrokeWidth(columnWidth + columnWidthAdjustment);
+        }
 
         int lineIndex = 0;
         for (int i = bounds.getMinXIndex(); i < bounds.getMaxXIndex(); i++) {
@@ -32,13 +40,7 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
         float prevY = drawingRect.bottom;
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-            if (drawingData == null) {
-                drawingData = new DrawingData<>(pointsData, columnWidth);
-                this.drawingDataList.add(drawingData);
-            }
             if (!drawingData.isVisible()) continue;
-
-            drawingData.paint.setStrokeWidth(columnWidth); // TODO
 
             float x = ChartUtils.calcXCoordinate(bounds, drawingRect, pointIndex);
             float y = ChartUtils.calcYCoordinate(bounds, drawingRect, pointsData.getPoints().get(pointIndex));

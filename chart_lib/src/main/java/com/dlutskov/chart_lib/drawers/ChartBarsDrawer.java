@@ -21,6 +21,8 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
         int pointsCount = bounds.getMaxXIndex() - bounds.getMinXIndex();
         int columnWidth = drawingRect.width() / pointsCount;
+        // Adjust columnWidth to get rid of gaps between bars
+        int columnWidthAdjustment = (drawingRect.width() % pointsCount) / pointsCount + 2;
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
             if (drawingData == null) {
@@ -29,7 +31,7 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
             }
             if (!drawingData.isVisible()) continue;
 
-            drawingData.paint.setStrokeWidth(columnWidth);
+            drawingData.paint.setStrokeWidth(columnWidth + columnWidthAdjustment);
             buildLines(drawingData.mLines, pointsData.getPoints(), bounds, columnWidth, drawingRect);
         }
     }
