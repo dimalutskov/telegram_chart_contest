@@ -69,7 +69,7 @@ public class ChartDataParser {
         ChartPointsData<DateCoordinate> xPoints = null;
         List<ChartPointsData<LongCoordinate>> yPoints = new ArrayList<>();
         for (ChartColumnData chartColumnData : dataHolderMap.values()) {
-            if (chartColumnData.type.equals(ChartData.CHART_TYPE_X)) {
+            if (chartColumnData.type.equals(ChartLinesData.CHART_TYPE_X)) {
                 xPoints = new ChartPointsData<>(chartColumnData.id, chartColumnData.name, chartColumnData.type, 0,
                         createDateCoordinates(chartColumnData.points));
             } else {

@@ -1,6 +1,8 @@
 package com.dlutskov.chart;
 
-import com.dlutskov.chart.data.ChartData;
+import android.view.View;
+
+import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
@@ -17,45 +19,59 @@ import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
 
-public class ChartController implements ChartPreviewView.Listener, ChartCheckBoxesContainer.Listener  {
+public class ChartController implements
+        ChartPreviewView.Listener,
+        ChartCheckBoxesContainer.Listener,
+        ChartFullView.Listener<DateCoordinate, LongCoordinate> {
 
     private static final float CHART_PREVIEW_MIN_SELECTED_WIDTH = 0.2f;
 
-    private final ChartData mChartData;
+    private final MainActivity mActivity;
+    private final ChartLinesData<DateCoordinate, LongCoordinate> mChartData;
+    private final String mAssetsDataFolder;
 
     private final ChartFullView<DateCoordinate, LongCoordinate> mChartView;
     private final ChartPreviewView<DateCoordinate, LongCoordinate> mChartPreview;
     private final ChartCheckBoxesContainer mCheckBoxesContainer;
 
-    ChartController(ChartData chartData, ChartFullView<DateCoordinate, LongCoordinate> chartView, ChartPreviewView<DateCoordinate,
-            LongCoordinate> chartPreview, ChartCheckBoxesContainer checkBoxesContainer) {
+    // TODO Hotfix. For aplying app theme
+    private ChartYAxisLabelsDrawer mYRightLabelsDrawer;
+
+    ChartController(MainActivity activity,
+                    ChartLinesData<DateCoordinate, LongCoordinate> chartData,
+                    String assetsDataFolder,
+                    ChartFullView<DateCoordinate, LongCoordinate> chartView,
+                    ChartPreviewView<DateCoordinate, LongCoordinate> chartPreview,
+                    ChartCheckBoxesContainer checkBoxesContainer) {
+        mActivity = activity;
         mChartData = chartData;
+        mAssetsDataFolder = assetsDataFolder;
         mChartView = chartView;
         mChartPreview = chartPreview;
         mCheckBoxesContainer = checkBoxesContainer;
 
+        mChartView.setListener(this);
         mChartPreview.setListener(this);
         mCheckBoxesContainer.setListener(this);
     }
 
     void showChart() {
-        ChartLinesData<DateCoordinate, LongCoordinate> chartData = mChartData.getOverviewData();
-        initChartDrawers(chartData);
-        int pointsSize = chartData.getXPoints().getPoints().size();
+        initChartDrawers(mChartData);
+        int pointsSize = mChartData.getXPoints().getPoints().size();
         int leftBound = (int) (pointsSize * (1 - CHART_PREVIEW_MIN_SELECTED_WIDTH));
         int rightBound = pointsSize - 1;
         // Update full chart
-        mChartView.updateChartData(chartData, leftBound, rightBound);
+        mChartView.updateChartData(mChartData, leftBound, rightBound);
         // Update preview chart with default bounds
-        mChartPreview.updateChartData(chartData);
+        mChartPreview.updateChartData(mChartData);
         mChartPreview.updateSelectedAreaBounds(leftBound, rightBound, rightBound - leftBound);
         // Create new checkboxes for new data
-        mCheckBoxesContainer.createCheckBoxes(chartData);
+        mCheckBoxesContainer.createCheckBoxes(mChartData);
     }
 
     private void initChartDrawers(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
         String chartType = chartData.getYPoints().get(0).getType();
-        if (chartType.equals(ChartData.CHART_TYPE_BAR) || chartType.equals(ChartData.CHART_TYPE_AREA)) {
+        if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
             mChartView.setMinYValue(LongCoordinate.valueOf(0));
             mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
             if (chartData.isPercentage()) {
@@ -73,16 +89,15 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
             mChartView.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartView));
 
             // Bind yLabelsDrawer to first graph
-            ChartPointsData<LongCoordinate> firstGraph = mChartData.getOverviewData().getYPoints().get(0);
+            ChartPointsData<LongCoordinate> firstGraph = mChartData.getYPoints().get(0);
             mChartView.getYLabelsDrawer().setScaledPointsId(firstGraph.getId(), firstGraph.getColor());
 
             // Create yLabelsDrawer for the second graph
-            ChartYAxisLabelsDrawer yRightLabelsDrawer = new ChartYAxisLabelsDrawer(mChartView, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
-            yRightLabelsDrawer.setSide(ChartYAxisLabelsDrawer.SIDE_RIGHT);
-            // TODO Theme update color
-            ChartPointsData<LongCoordinate> secondGraph = mChartData.getOverviewData().getYPoints().get(1);
-            yRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
-            mChartView.addDrawer(yRightLabelsDrawer);
+            mYRightLabelsDrawer = new ChartYAxisLabelsDrawer(mChartView, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
+            mYRightLabelsDrawer.setSide(ChartYAxisLabelsDrawer.SIDE_RIGHT);
+            ChartPointsData<LongCoordinate> secondGraph = mChartData.getYPoints().get(1);
+            mYRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
+            mChartView.addDrawer(mYRightLabelsDrawer);
         }
         // Lines drawers will be used by default
     }
@@ -110,6 +125,9 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
                     ChartPointsDrawer pointsDrawer = mChartView.getPointsDrawer();
                     if (pointsDrawer instanceof ChartLinesDrawer) {
                         ((ChartLinesDrawer) pointsDrawer).setSelectedPointsDividerColor(updatedColor);
+                    }
+                    if (mYRightLabelsDrawer != null) {
+                        mYRightLabelsDrawer.setGridColor(updatedColor);
                     }
                 });
 
@@ -163,5 +181,29 @@ public class ChartController implements ChartPreviewView.Listener, ChartCheckBox
     public void onChartLineCheckBoxStateChanged(String id, boolean checked) {
         mChartView.updatePointsVisibility(id, checked);
         mChartPreview.updatePointsVisibility(id, checked);
+    }
+
+    @Override
+    public void onExpandChartClicked(ChartFullView<DateCoordinate, LongCoordinate> view, int pointsIndex) {
+        long timeStamp = mChartData.getXPoints().getPoints().get(pointsIndex).getValue();
+        mActivity.setProgressVisibility(View.VISIBLE);
+        new Thread(() -> {
+            ChartLinesData<DateCoordinate, LongCoordinate> expandedData = null;
+            try {
+                expandedData = ChartDataProvider.getExpandedChartData(mChartView.getContext(), mAssetsDataFolder, timeStamp);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final ChartLinesData<DateCoordinate, LongCoordinate> finalData = expandedData;
+            mChartView.post(() -> {
+                mActivity.setProgressVisibility(View.GONE);
+                // Hide progress
+                if (finalData != null) {
+                    // TODO TBD
+                }
+            });
+        }).start();
+
     }
 }

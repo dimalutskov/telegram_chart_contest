@@ -8,16 +8,18 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.dlutskov.chart.data.ChartData;
 import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
 import com.dlutskov.chart.view.MoonIconView;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
+import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
@@ -48,6 +50,8 @@ public class MainActivity extends Activity {
     private ViewGroup mHeaderLayout;
     private MoonIconView mIconMoon;
 
+    private View mProgress;
+
     private List<ChartController> mChartsControllers = new ArrayList<>();
 
     private AppDesign.Theme mTheme = AppDesign.Theme.DAY;
@@ -71,39 +75,64 @@ public class MainActivity extends Activity {
         mRootView.addView(mHeaderLayout);
 
         ////////////////////
-        List<ChartData> chartDataList = null;
+        List<ChartLinesData<DateCoordinate, LongCoordinate>> chartDataList = null;
         try {
             chartDataList = ChartDataProvider.readChartData(this);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        FrameLayout frameLayout = new FrameLayout(this);
+        frameLayout.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+
         // Scroll view for charts
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        ScrollView chartsScrollView = new ScrollView(this);
+        chartsScrollView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
         // Container for charts
         LinearLayout chartsContainer = new LinearLayout(this);
         chartsContainer.setLayoutParams(new ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
         chartsContainer.setOrientation(LinearLayout.VERTICAL);
-        scrollView.addView(chartsContainer);
+        chartsScrollView.addView(chartsContainer);
 
         createChartControllers(chartDataList, chartsContainer);
+        frameLayout.addView(chartsScrollView);
         /////////////////////
 
-        mRootView.addView(scrollView);
+        // Progress view
+        mProgress = createProgressView(this);
+        frameLayout.addView(mProgress);
+
+        mRootView.addView(frameLayout);
         setContentView(mRootView);
 
         applyCurrentColors(false);
     }
 
-    private void createChartControllers( List<ChartData> chartDataList, ViewGroup chartsContainer) {
+    private static View createProgressView(Context context) {
+        FrameLayout progressView = new FrameLayout(context);
+        progressView.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        progressView.setClickable(true);
+
+        ProgressBar progressBar = new ProgressBar(context);
+        int size = ChartUtils.getPixelForDp(context, 50);
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(size, size);
+        layoutParams.gravity = Gravity.CENTER;
+        progressBar.setLayoutParams(layoutParams);
+
+        progressView.addView(progressBar);
+        progressView.setVisibility(View.GONE);
+        return progressView;
+    }
+
+    private void createChartControllers(List<ChartLinesData<DateCoordinate, LongCoordinate>> chartDataList, ViewGroup chartsContainer) {
         int margin = ChartUtils.getPixelForDp(this, PADDING_GENERAL * 2);
 
         View spaceView = new View(this);
         spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin / 2));
         chartsContainer.addView(spaceView);
 
-        for (ChartData chartData : chartDataList) {
+        for (int i = 0; i < chartDataList.size(); i++) {
+            ChartLinesData<DateCoordinate, LongCoordinate> chartData = chartDataList.get(i);
             // Chart Full View
             ChartFullView<DateCoordinate, LongCoordinate> chartView = createChartFullView(this);
             chartsContainer.addView(chartView);
@@ -118,7 +147,8 @@ public class MainActivity extends Activity {
             spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin));
             chartsContainer.addView(spaceView);
 
-            ChartController controller = new ChartController(chartData, chartView, chartPreview, checkboxesContainer);
+            ChartController controller = new ChartController(this, chartData, String.valueOf(i + 1),
+                    chartView, chartPreview, checkboxesContainer);
             controller.showChart();
             mChartsControllers.add(controller);
         }
@@ -208,6 +238,10 @@ public class MainActivity extends Activity {
         for (ChartController controller : mChartsControllers) {
             controller.applyCurrentColors(mTheme, animate);
         }
+    }
+
+    public void setProgressVisibility(int visibility) {
+        mProgress.setVisibility(visibility);
     }
 
 }

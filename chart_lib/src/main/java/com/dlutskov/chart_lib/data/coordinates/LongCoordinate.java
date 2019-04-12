@@ -95,6 +95,10 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
         return new LongCoordinate(mValue);
     }
 
+    public long getValue() {
+        return mValue;
+    }
+
     private static String formatName(long value) {
         if (value == Long.MIN_VALUE) return formatName(Long.MIN_VALUE + 1);
         if (value < 0) return "-" + formatName(-value);
@@ -113,3 +117,5 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
         return new LongCoordinate(value);
     }
 }
+// TODO Crash on empty
+// ChartPreview

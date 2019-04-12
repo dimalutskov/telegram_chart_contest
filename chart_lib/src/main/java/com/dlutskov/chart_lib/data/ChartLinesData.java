@@ -13,6 +13,11 @@ import java.util.Set;
  */
 public class ChartLinesData<X extends ChartCoordinate, Y extends ChartCoordinate> {
 
+    public static final String CHART_TYPE_X = "x";
+    public static final String CHART_TYPE_LINE = "line";
+    public static final String CHART_TYPE_BAR = "bar";
+    public static final String CHART_TYPE_AREA = "area";
+
     /**
      * X points collection which is common for all mYPoints
      */

@@ -27,6 +27,10 @@ import com.dlutskov.chart_lib.utils.ChartUtils;
  */
 public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>  extends ChartView<X, Y> {
 
+    public interface Listener<X extends ChartCoordinate, Y extends ChartCoordinate> {
+        void onExpandChartClicked(ChartFullView<X, Y> view, int pointsIndex);
+    }
+
     public static final long POINTS_DETAILS_DISAPPEARING_DELAY = 3000;
 
     private ChartXAxisLabelsDrawer<X, Y> mXAxisLabelsDrawer;
@@ -48,6 +52,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
     private boolean mShowPointsDetailsOnTouch = true;
     private boolean mDetectClickOnPointsDetails;
+    private boolean mHidePointsOnTouchUp = true;
 
     /**
      * Default touch slop to detect if we capture something to handles dragging on touch events
@@ -60,6 +65,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     private float mDownTouchX;
 
     private boolean isTouchIntercepted;
+
+    private Listener<X, Y> mListener;
 
     public ChartFullView(Context context) {
         super(context);
@@ -132,6 +139,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                mHidePointsOnTouchUp = true;
                 mDownTouchX = x;
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -147,7 +155,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (mPointsDetailsDrawer.isShown()) {
+                if (mHidePointsOnTouchUp && mPointsDetailsDrawer.isShown()) {
                     hidePointsDetails(POINTS_DETAILS_DISAPPEARING_DELAY);
                 }
                 isTouchIntercepted = false;
@@ -178,7 +186,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         }
     }
 
-    private void hidePointsDetails(long delay) {
+    public void hidePointsDetails(long delay) {
         removeCallbacks(mHidePointsDetailsTask);
 
         if (delay == 0) {
@@ -257,12 +265,20 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         invalidate();
     }
 
+    public void setListener(Listener<X, Y> listener) {
+        mListener = listener;
+    }
+
     class GestureDetectorListener extends GestureDetector.SimpleOnGestureListener {
 
         @Override
         public boolean onSingleTapUp(MotionEvent e) {
             if (mDetectClickOnPointsDetails && mPointsDetailsDrawer.isShown() && mPointsDetailsDrawer.isTouchInside(e.getX(), e.getY())) {
-                hidePointsDetails(0);
+                if (mListener != null) {
+                    mHidePointsOnTouchUp = false;
+                    removeCallbacks(mHidePointsDetailsTask); // It'll be hidden on animation
+                    mListener.onExpandChartClicked(ChartFullView.this, mPointsDetailsXIndex);
+                }
             } else {
                 if (mPointsDetailsDrawer.isShown()) {
                     hidePointsDetails(0);
