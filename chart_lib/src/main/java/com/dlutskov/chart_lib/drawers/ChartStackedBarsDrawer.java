@@ -26,6 +26,7 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
             DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
             drawingData.paint.setStrokeWidth(columnWidth + columnWidthAdjustment);
+            drawingData.paint.setAlpha(mPointsAlpha);
         }
 
         int lineIndex = 0;

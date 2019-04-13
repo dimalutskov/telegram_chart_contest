@@ -45,6 +45,7 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
             if (!drawingData.isVisible()) continue;
 
             drawingData.paint.setStrokeWidth(columnWidth + columnWidthAdjustment);
+            drawingData.paint.setAlpha(mPointsAlpha);
 
             // Build lines
             int lineIndex = 0;
@@ -76,14 +77,6 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
                 }
             }
         }
-    }
-
-    @Override
-    protected void onVisibilityAnimatorUpdate(DrawingData<Y> pointsData, int alpha) {
-        pointsData.setAlpha(alpha);
-        // Do not change paint's alpha for this drawer - bars size will be reduced according to disappearance progress
-        mChartView.invalidate();
-        invalidate();
     }
 
     @Override

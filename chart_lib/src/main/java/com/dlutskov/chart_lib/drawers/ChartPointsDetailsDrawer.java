@@ -76,8 +76,12 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private boolean isShown;
 
-    public ChartPointsDetailsDrawer(ChartView<X, Y> chartView) {
+    private final boolean isExpandedPoints;
+
+    public ChartPointsDetailsDrawer(ChartView<X, Y> chartView, boolean isExpandedPoints) {
         super(chartView);
+
+        this.isExpandedPoints = isExpandedPoints;
 
         Context ctx = chartView.getContext();
         mCornerRadius = ChartUtils.getPixelForDp(ctx, 4);
@@ -117,9 +121,9 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     }
 
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
-        mHiddenChartLines.clear();
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenPoints) {
+        super.updateData(data, bounds, hiddenPoints);
+        mHiddenChartLines = new HashSet<>(hiddenPoints);
     }
 
     @Override
@@ -188,7 +192,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         // Draw X label
         mXLabelTextPaint.setAlpha(mCurrentAlpha);
-        String xLabel = mData.getXPoints().getPoints().get(mSelectedPointPosition).getFullName();
+        X xPoint = mData.getXPoints().getPoints().get(mSelectedPointPosition);
+        String xLabel = isExpandedPoints ? xPoint.getExpandedName() : xPoint.getFullName();
         canvas.drawText(xLabel, leftX, yPosition, mXLabelTextPaint);
 
         // Draw > glyph

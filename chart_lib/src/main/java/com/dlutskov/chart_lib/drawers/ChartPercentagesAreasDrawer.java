@@ -97,6 +97,7 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
             if (!drawingData.isVisible()) continue;
 
             drawingData.paint.setStrokeWidth(lineWidth); // TODO
+            drawingData.paint.setAlpha(mPointsAlpha);
 
             float x = ChartUtils.calcXCoordinate(bounds, drawingRect, pointIndex);
             float y = ChartUtils.calcYCoordinate(bounds, drawingRect, pointsData.getPoints().get(pointIndex));
@@ -119,14 +120,6 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
                 canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
             }
         }
-    }
-
-    @Override
-    protected void onVisibilityAnimatorUpdate(DrawingData<Y> pointsData, int alpha) {
-        pointsData.setAlpha(alpha);
-        // Do not change paint's alpha for this drawer - bars size will be reduced according to disappearance progress
-        mChartView.invalidate();
-        invalidate();
     }
 
 //    private void buildAreaPathes(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect, int pointIndex) {

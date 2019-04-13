@@ -18,6 +18,7 @@ import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Draws Y axis labels according to current chart's y bounds
@@ -77,12 +78,12 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
         if (mScaledPointsId != null) {
             // Drawer is related to specific points - so need to calculate bounds only for this points
             bounds = calculateScaledBounds(bounds, data);
         }
-        super.updateData(data, bounds);
+        super.updateData(data, bounds, hiddenChartPoints);
     }
 
     @Override

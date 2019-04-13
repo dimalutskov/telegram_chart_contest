@@ -6,6 +6,7 @@ import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
+import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.DateCoordinate;
@@ -61,9 +62,9 @@ public class ChartController implements
         int leftBound = (int) (pointsSize * (1 - CHART_PREVIEW_MIN_SELECTED_WIDTH));
         int rightBound = pointsSize - 1;
         // Update full chart
-        mChartView.updateChartData(mChartData, leftBound, rightBound);
+        mChartView.updateChartData(mChartData, leftBound, rightBound, false);
         // Update preview chart with default bounds
-        mChartPreview.updateChartData(mChartData);
+        mChartPreview.updateChartData(mChartData, false);
         mChartPreview.updateSelectedAreaBounds(leftBound, rightBound, rightBound - leftBound);
         // Create new checkboxes for new data
         mCheckBoxesContainer.createCheckBoxes(mChartData);
@@ -74,20 +75,7 @@ public class ChartController implements
         if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
             mChartView.setMinYValue(LongCoordinate.valueOf(0));
             mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
-            if (chartData.isPercentage()) {
-                mChartView.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartView));
-                mChartPreview.setPointsDrawer(new ChartPercentagesAreasDrawer<>(mChartPreview));
-            } else if (chartData.isStacked()) {
-                mChartView.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartView));
-                mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
-            } else {
-                mChartView.setPointsDrawer(new ChartBarsDrawer<>(mChartView));
-                mChartPreview.setPointsDrawer(new ChartStackedBarsDrawer<>(mChartPreview));
-            }
         } else if (chartData.isYScaled()) {
-            mChartPreview.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartPreview));
-            mChartView.setPointsDrawer(new ChartScaledLinesDrawer<>(mChartView));
-
             // Bind yLabelsDrawer to first graph
             ChartPointsData<LongCoordinate> firstGraph = mChartData.getYPoints().get(0);
             mChartView.getYLabelsDrawer().setScaledPointsId(firstGraph.getId(), firstGraph.getColor());
@@ -99,7 +87,25 @@ public class ChartController implements
             mYRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
             mChartView.addDrawer(mYRightLabelsDrawer);
         }
-        // Lines drawers will be used by default
+        mChartView.setPointsDrawer(createPointsDrawer(chartData, mChartView));
+        mChartPreview.setPointsDrawer(createPointsDrawer(chartData, mChartPreview));
+    }
+
+    private static ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> createPointsDrawer(ChartLinesData<DateCoordinate, LongCoordinate> chartData,
+                                                                                           ChartView<DateCoordinate, LongCoordinate> chartView) {
+        String chartType = chartData.getYPoints().get(0).getType();
+        if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
+            if (chartData.isPercentage()) {
+                return new ChartPercentagesAreasDrawer<>(chartView);
+            } else if (chartData.isStacked()) {
+                return new ChartStackedBarsDrawer<>(chartView);
+            } else {
+                return new ChartBarsDrawer<>(chartView);
+            }
+        } else if (chartData.isYScaled()) {
+            return new ChartScaledLinesDrawer<>(chartView);
+        }
+        return new ChartLinesDrawer<>(chartView);
     }
 
     void applyCurrentColors(AppDesign.Theme curTheme, boolean animate) {
@@ -200,7 +206,13 @@ public class ChartController implements
                 mActivity.setProgressVisibility(View.GONE);
                 // Hide progress
                 if (finalData != null) {
-                    // TODO TBD
+                    ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> pointsDrawer = createPointsDrawer(finalData, mChartView);
+                    // Hardcoded positions as we definitely know that there are 3 days before and after selected day
+                    int newMinXIndex = 72;
+                    int newMaxXIndex = 96;
+                    mChartView.expand(pointsDrawer, finalData, pointsIndex, newMinXIndex, newMaxXIndex);
+                    // TODO Preview
+                    mChartPreview.updateChartData(finalData, newMinXIndex, newMaxXIndex, true);
                 }
             });
         }).start();

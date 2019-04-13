@@ -11,25 +11,30 @@ public class DateCoordinate extends LongCoordinate {
 
     private static final String DEFAULT_AXIS_DATE_FORMAT = "dd MMM";
     private static final String DEFAULT_FULL_DATE_FORMAT = "E, MMM dd";
+    private static final String DEFAULT_EXPANDED_DATE_FORMAT = "HH:mm";
 
     private final DateFormat mAxisFormat;
     private final DateFormat mDetailsFormat;
+    private final DateFormat mExpandedFormat;
 
     DateCoordinate(long value) {
         this(value, new SimpleDateFormat(DEFAULT_AXIS_DATE_FORMAT, Locale.getDefault()),
-                new SimpleDateFormat(DEFAULT_FULL_DATE_FORMAT, Locale.getDefault()));
+                new SimpleDateFormat(DEFAULT_FULL_DATE_FORMAT, Locale.getDefault()),
+                new SimpleDateFormat(DEFAULT_EXPANDED_DATE_FORMAT, Locale.getDefault()));
     }
 
-    DateCoordinate(long value, SimpleDateFormat axisDateFormat, SimpleDateFormat fullDateFormat) {
+    DateCoordinate(long value, SimpleDateFormat axisDateFormat, SimpleDateFormat fullDateFormat, SimpleDateFormat expandedDateFormat) {
         super(value);
         mAxisFormat = axisDateFormat;
         mDetailsFormat = fullDateFormat;
+        mExpandedFormat = expandedDateFormat;
         initLabels(value);
     }
 
     private void initLabels(long value) {
         mAxisName = mAxisFormat.format(value);
         mFullName = mDetailsFormat.format(value);
+        mExpandedName = mExpandedFormat.format(value);
     }
 
     @Override

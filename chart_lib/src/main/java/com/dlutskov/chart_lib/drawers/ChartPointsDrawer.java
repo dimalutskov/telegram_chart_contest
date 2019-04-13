@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate, P extends ChartPointsDrawer.DrawingData<Y>>
         extends ChartDataDrawer<X, Y>
@@ -27,6 +28,11 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     private BoundsUpdateAnimator<X, Y> mBoundsAnimHandler;
 
     private Map<String, ValueAnimator> mPointsAnimators = new HashMap<>();
+
+    /**
+     * Common alpha value for all chart points
+     */
+    protected int mPointsAlpha = 255;
 
     /**
      * Index of X point which is selected now and all related Y points need to be draw as selected
@@ -62,9 +68,14 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         mChartView.invalidate();
     }
 
+    public void setPointsAlpha(int alpha) {
+        mPointsAlpha = alpha;
+        mChartView.invalidate();
+    }
+
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
+        super.updateData(data, bounds, hiddenChartPoints);
         drawingDataList.clear();
         if (mBoundsAnimHandler != null) {
             mBoundsAnimHandler.cancel();
@@ -144,12 +155,6 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         return null;
     }
 
-    protected void onVisibilityAnimatorUpdate(P pointsData, int alpha) {
-        pointsData.setAlpha(alpha);
-        pointsData.getPaint().setAlpha(alpha);
-        mChartView.invalidate();
-    }
-
     /**
      * Handles points visibility changes
      */
@@ -169,7 +174,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         public void onAnimationUpdate(ValueAnimator animation) {
             float progress = (float) animation.getAnimatedValue();
             int alpha = (int) (mAppear ? mInitialAlpha + (255 - mInitialAlpha) * progress :  mInitialAlpha * (1 - progress));
-            onVisibilityAnimatorUpdate(mPointsData, alpha);
+            mPointsData.setAlpha(alpha);
+            mChartView.invalidate();
         }
     }
 

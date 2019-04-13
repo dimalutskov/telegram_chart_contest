@@ -13,6 +13,7 @@ import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ChartScaledLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartLinesDrawer<X, Y> {
 
@@ -24,8 +25,8 @@ public class ChartScaledLinesDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
+        super.updateData(data, bounds, hiddenChartPoints);
         // Stop all running animators
         for (BoundsUpdateAnimator<X, Y> animator : mBoundsAnimHandlers.values()) {
             animator.cancel();

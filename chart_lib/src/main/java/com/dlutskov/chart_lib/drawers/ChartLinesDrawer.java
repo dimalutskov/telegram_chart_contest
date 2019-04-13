@@ -13,6 +13,7 @@ import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Draws chart's lines and handles update bounds and visibility animations
@@ -81,10 +82,15 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
     }
 
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
+        super.updateData(data, bounds, hiddenChartPoints);
+        this.drawingDataList.clear();
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
-            this.drawingDataList.add(new DrawingData<>(pointsData, mLineStrokeWidth));
+            DrawingData<Y> drawingData = new DrawingData<>(pointsData, mLineStrokeWidth);
+            boolean isVisible = !hiddenChartPoints.contains(pointsData.getId());
+            drawingData.setVisible(isVisible);
+            drawingData.setAlpha(isVisible ? 255 : 0);
+            this.drawingDataList.add(drawingData);
         }
     }
 
@@ -112,6 +118,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
         int linesCount = (getBounds().getMaxXIndex() - getBounds().getMinXIndex()) * 4;
         for (DrawingData<Y> drawingData : drawingDataList) {
             if (drawingData.isVisible()) {
+                drawingData.getPaint().setAlpha(Math.min(mPointsAlpha, drawingData.getAlpha()));
                 canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
             }
         }

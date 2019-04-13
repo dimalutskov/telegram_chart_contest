@@ -75,6 +75,11 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
      */
     String getFullName();
 
+    /**
+     * Returns name for expanded charts coordinates
+     */
+    String getExpandedName();
+
     T clone();
 
 }

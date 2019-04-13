@@ -129,14 +129,15 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
     }
 
     @Override
-    public void updateChartData(ChartLinesData<X, Y> chartData) {
-        super.updateChartData(chartData);
+    public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
+        super.updateChartData(chartData, minXIndex, maxXindex, keepHiddenChartLines);
 
         mXPointsCount = chartData.getXPoints().getPoints().size();
-        mSelectedMaxXIndex = mXPointsCount - 1;
-        // Min number of points is 20% of all points by default
-        mMinXPointsCount = (int) (mXPointsCount * 0.2f);
-        mSelectedMinXIndex = mXPointsCount - mMinXPointsCount;
+
+        mSelectedMinXIndex = minXIndex;
+        mSelectedMaxXIndex = maxXindex;
+
+        mMinXPointsCount = Math.max(mMinXPointsCount, mSelectedMaxXIndex - mSelectedMinXIndex);
 
         if (getWidth() != 0) {
             // Calculate coordinates if view was already drawn - if no - it'll be calculated in updatePointsDrawingRect

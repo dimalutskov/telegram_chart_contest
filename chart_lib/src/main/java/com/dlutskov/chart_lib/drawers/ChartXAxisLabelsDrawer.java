@@ -16,6 +16,7 @@ import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Draws X axis labels according to x chart's bounds
@@ -34,6 +35,8 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
     private long mFadingAnimationDuration = ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION;
 
+    private boolean isExpandedPoints;
+
     public ChartXAxisLabelsDrawer(ChartView<X, Y> chartView, int size) {
         super(chartView, size);
         mBackgroundPaint.setStyle(Paint.Style.FILL);
@@ -41,8 +44,8 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
-        super.updateData(data, bounds);
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
+        super.updateData(data, bounds, hiddenChartPoints);
         mLabelCells.clear();
     }
 
@@ -81,7 +84,7 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         // Add first cell from the right side if there are no cells yet
         if (mLabelCells.isEmpty()) {
             int position = bounds.getMaxXIndex() - currentCellSize;
-            String name = points.get(position).getAxisName();
+            String name = isExpandedPoints ? points.get(position).getExpandedName() : points.get(position).getAxisName();
             LabelCell label = new LabelCell(name, position, mLabelPaint.measureText(name));
             mLabelCells.add(label);
         }
@@ -93,7 +96,7 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             if (leftCellPosition < bounds.getMinXIndex() || nextCellPosition < 0) {
                 break;
             }
-            String name = points.get(nextCellPosition).getAxisName();
+            String name = isExpandedPoints ? points.get(nextCellPosition).getExpandedName() : points.get(nextCellPosition).getAxisName();
             LabelCell label = new LabelCell(name, nextCellPosition, mLabelPaint.measureText(name));
             mLabelCells.add(0, label);
         }
@@ -105,7 +108,7 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             if (nextCellPosition > bounds.getMaxXIndex() || nextCellPosition + actualCellSize > points.size() - 1) {
                 break;
             }
-            String name = points.get(nextCellPosition).getAxisName();
+            String name = isExpandedPoints ? points.get(nextCellPosition).getExpandedName() : points.get(nextCellPosition).getAxisName();
             LabelCell label = new LabelCell(name, nextCellPosition, mLabelPaint.measureText(name));
             mLabelCells.add(label);
         }
@@ -127,7 +130,7 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             } else if (!labelsDisappeared && currentCell.position - nextCell.position > actualCellSize * 1.8f) {
                 // Distance between cells is enough to add new cell between
                 int labelPosition = currentCell.position + (nextCell.position - currentCell.position) / 2;
-                String name = points.get(labelPosition).getAxisName();
+                String name = isExpandedPoints ? points.get(labelPosition).getExpandedName() : points.get(labelPosition).getAxisName();
                 LabelCell label = new LabelCell(name, labelPosition, mLabelPaint.measureText(name));
                 mLabelCells.add(labelCellIndex, label); // ?
                 animatedCells.add(label);
@@ -168,7 +171,8 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     public void onAfterDraw(Canvas canvas, Rect drawingRect) {
         super.onAfterDraw(canvas, drawingRect);
         // Draw background
-        canvas.drawRect(drawingRect.left, drawingRect.bottom, drawingRect.right, canvas.getHeight(), mBackgroundPaint);
+        float rectPaddingTop = (canvas.getHeight() - drawingRect.bottom) * 0.1f;
+        canvas.drawRect(drawingRect.left, drawingRect.bottom + rectPaddingTop, drawingRect.right, canvas.getHeight(), mBackgroundPaint);
 
         float y = canvas.getHeight() - mTextSize / 2;
         for (LabelCell drawnLabel : mLabelCells) {
@@ -183,6 +187,15 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     public void setBackgroundColor(int color) {
         mBackgroundPaint.setColor(color);
         mChartView.invalidate();
+    }
+
+    public void setExpandedPoints(boolean expandedPoints) {
+        if (isExpandedPoints != expandedPoints) {
+            isExpandedPoints = expandedPoints;
+            mLabelCells.clear();
+            invalidate();
+            mChartView.invalidate();
+        }
     }
 
     // Contains data about axis label which is drawn on the canvas

@@ -8,6 +8,8 @@ import com.dlutskov.chart_lib.ChartView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 
+import java.util.Set;
+
 /**
  * Base class for drawing on the {@link ChartView} canvas.
  * Handles all chart's data and properties changes before drawing it on the canvas
@@ -38,7 +40,7 @@ public abstract class ChartDataDrawer<X extends ChartCoordinate, Y extends Chart
         this.mChartView = chartView;
     }
 
-    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds) {
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenPoints) {
         mData = data;
         mBounds = new ChartBounds<>(bounds);
         mInvalidated = true;

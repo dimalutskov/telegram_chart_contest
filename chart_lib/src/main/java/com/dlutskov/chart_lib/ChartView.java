@@ -20,7 +20,7 @@ import java.util.Set;
 
 /**
  * Base view for drawing chart according to specified {@link ChartLinesData}.
- * Call {@link #updateChartData(ChartLinesData)} to draw chart with specified data
+ * Call {@link #updateChartData(ChartLinesData, boolean)} to draw chart with specified data
  * All drawing is performed on the {@link #onDraw(Canvas)} callback by delegating drawing
  * to all registered {@link ChartDataDrawer} instances.
  * To draw something more - register own ChartDataDrawer by calling {@link #addDrawer(ChartDataDrawer)}
@@ -87,28 +87,30 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         setWillNotDraw(false);
     }
 
-    public void updateChartData(ChartLinesData<X, Y> chartData) {
-        updateChartData(chartData,0, chartData.getXPoints().getPoints().size() - 1);
+    public void updateChartData(ChartLinesData<X, Y> chartData, boolean keepHiddenChartLines) {
+        updateChartData(chartData, 0, chartData.getXPoints().getPoints().size() - 1, false);
     }
 
-    public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex) {
-        updateChartDataInternal(chartData, minXIndex, maxXindex);
+    public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
+        updateChartDataInternal(chartData, minXIndex, maxXindex, keepHiddenChartLines);
     }
 
-    private void updateChartDataInternal(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex) {
+    private void updateChartDataInternal(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
         mLinesData = chartData;
-        mHiddenChartLines.clear();
+        if (!keepHiddenChartLines) {
+            mHiddenChartLines.clear();
+        }
         // Calculate initial bounds
-        calculateCurrentBounds(minXIndex, maxXindex);
-        mPointsDrawer.updateData(mLinesData, mBounds);
+        calculateCurrentBounds(mLinesData, minXIndex, maxXindex, mBounds);
+        mPointsDrawer.updateData(mLinesData, mBounds, mHiddenChartLines);
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
-            drawer.updateData(chartData, mBounds);
+            drawer.updateData(chartData, mBounds, mHiddenChartLines);
         }
     }
 
     public void updateHorizontalBounds(int minXIndex, int maxXIndex) {
         ChartBounds<X, Y> currentBounds = new ChartBounds<>(mBounds);
-        calculateCurrentBounds(minXIndex, maxXIndex);
+        calculateCurrentBounds(mLinesData, minXIndex, maxXIndex, mBounds);
         onBoundsUpdated(currentBounds, mBounds);
     }
 
@@ -122,7 +124,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         // Calculate and update new bounds
         if (mHiddenChartLines.size() != mLinesData.getYPoints().size()) {
             ChartBounds<X, Y> currentBounds = new ChartBounds<>(mBounds);
-            calculateCurrentBounds(mBounds.getMinXIndex(), mBounds.getMaxXIndex());
+            calculateCurrentBounds(mLinesData, mBounds.getMinXIndex(), mBounds.getMaxXIndex(), mBounds);
             onBoundsUpdated(currentBounds, mBounds);
         }
         // Update points
@@ -158,31 +160,34 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.draw(canvas, mDrawingRect);
         }
-        // Draw lines
-        mPointsDrawer.draw(canvas, mDrawingRect);
+       drawPoints(canvas, mDrawingRect);
         // Post Drawing
         for (ChartDataDrawer<X, Y> drawer : mDrawers) {
             drawer.onAfterDraw(canvas, mDrawingRect);
         }
     }
 
-    private void calculateCurrentBounds(int minXIndex, int maxXIndex) {
-        if (mBounds.getMinY() != null && mBounds.getMaxY() != null && mLinesData.isYScaled()) {
+    protected void drawPoints(Canvas canvas, Rect drawingRect) {
+        mPointsDrawer.draw(canvas, drawingRect);
+    }
+
+    protected void calculateCurrentBounds(ChartLinesData<X, Y> data, int minXIndex, int maxXIndex, ChartBounds<X, Y> resultBounds) {
+        if (resultBounds.getMinY() != null && resultBounds.getMaxY() != null && data.isYScaled()) {
             // For scaled graphs - each drawer will calculate local bounds for related graph
             // No need to calculate common Y bounds
-            mBounds.setMinXIndex(minXIndex);
-            mBounds.setMaxXIndex(maxXIndex);
+            resultBounds.setMinXIndex(minXIndex);
+            resultBounds.setMaxXIndex(maxXIndex);
             return;
         }
 
-        mYBoundsPair = mLinesData.calculateYBounds(minXIndex, maxXIndex, mHiddenChartLines, mYBoundsPair);
+        mYBoundsPair = data.calculateYBounds(minXIndex, maxXIndex, mHiddenChartLines, mYBoundsPair);
         if (mMinYValue != null && mMinYValue.compareTo(mYBoundsPair.first) < 0) {
             mYBoundsPair.first = mMinYValue;
         }
         if (mMaxYValue != null && mMaxYValue.compareTo(mYBoundsPair.second) > 0) {
             mYBoundsPair.second = mMaxYValue;
         }
-        mBounds.update(minXIndex, maxXIndex, mYBoundsPair.first, mYBoundsPair.second);
+        resultBounds.update(minXIndex, maxXIndex, mYBoundsPair.first, mYBoundsPair.second);
     }
 
     public ChartPointsDrawer<X, Y, ?> getPointsDrawer() {
