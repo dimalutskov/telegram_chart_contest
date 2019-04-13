@@ -17,6 +17,7 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
 
     Long mValue;
     String mAxisName;
+    String mHeaderName;
     String mFullName;
     String mExpandedName;
 
@@ -28,6 +29,7 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
         mValue = value;
         mAxisName = formatName(value);
         mFullName = String.valueOf(value);
+        mHeaderName = mFullName;
         mExpandedName = mFullName;
         return this;
     }
@@ -80,6 +82,11 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
     @Override
     public String getAxisName() {
         return mAxisName;
+    }
+
+    @Override
+    public String getHeaderName() {
+        return mHeaderName;
     }
 
     @Override

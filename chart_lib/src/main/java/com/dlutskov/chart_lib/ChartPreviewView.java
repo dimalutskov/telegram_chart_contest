@@ -145,7 +145,7 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
             // which will be updated with animation
             mSelectedMinXIndexTarget = minXIndex;
             mSelectedMaxXIndexTarget = maxXindex;
-            mMinXPointsCountTarget = maxXindex - minXIndex;
+            mMinXPointsCountTarget = Math.min(mMinXPointsCount, maxXindex - minXIndex);
 
             mSelectedMinXIndex = coordinateToIndex(mAreaLeftBound);
             mSelectedMaxXIndex = coordinateToIndex(mAreaRightBound);

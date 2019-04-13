@@ -46,6 +46,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     private long mAnimDuration;
 
+    private boolean mAnimateBoundsChanges = true;
+
     protected ChartPointsDrawer(ChartView chartView) {
         super(chartView);
         mAnimDuration = ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION;
@@ -73,6 +75,10 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         mChartView.invalidate();
     }
 
+    public void setAnimateBoundsChanges(boolean animateBoundsChanges) {
+        mAnimateBoundsChanges = animateBoundsChanges;
+    }
+
     @Override
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
         super.updateData(data, bounds, hiddenChartPoints);
@@ -84,6 +90,10 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     @Override
     public void updateBounds(ChartBounds<X, Y> currentBounds, ChartBounds<X, Y> targetBounds) {
+        if (!mAnimateBoundsChanges) {
+            super.updateBounds(currentBounds, targetBounds);
+            return;
+        }
         // Instantly update only x values, y values will be updated by animation
         currentBounds = new ChartBounds<>(currentBounds);
         currentBounds.setMinXIndex(targetBounds.getMinXIndex());

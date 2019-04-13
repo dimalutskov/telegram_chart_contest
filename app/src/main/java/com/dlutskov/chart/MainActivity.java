@@ -52,8 +52,6 @@ public class MainActivity extends Activity {
 
     private List<ChartController> mChartsControllers = new ArrayList<>();
 
-    private AppDesign.Theme mTheme = AppDesign.Theme.DAY;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,18 +65,10 @@ public class MainActivity extends Activity {
         mHeaderLayout = createHeaderView(this);
         mIconMoon = (MoonIconView) mHeaderLayout.getChildAt(1);
         mIconMoon.setOnClickListener(v -> {
-            mTheme = mTheme.invertedTheme();
+            AppDesign.switchTheme();
             applyCurrentColors(true);
         });
         mRootView.addView(mHeaderLayout);
-
-        ////////////////////
-        List<ChartLinesData<DateCoordinate, LongCoordinate>> chartDataList = null;
-        try {
-            chartDataList = ChartDataProvider.readChartData(this);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         FrameLayout frameLayout = new FrameLayout(this);
         frameLayout.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
@@ -92,7 +82,7 @@ public class MainActivity extends Activity {
         chartsContainer.setOrientation(LinearLayout.VERTICAL);
         chartsScrollView.addView(chartsContainer);
 
-        createChartControllers(chartDataList, chartsContainer);
+        createChartControllers(chartsContainer);
         frameLayout.addView(chartsScrollView);
         /////////////////////
 
@@ -122,18 +112,48 @@ public class MainActivity extends Activity {
         return progressView;
     }
 
-    private void createChartControllers(List<ChartLinesData<DateCoordinate, LongCoordinate>> chartDataList, ViewGroup chartsContainer) {
-        for (int i = 0; i < chartDataList.size(); i++) {
-            ChartLinesData<DateCoordinate, LongCoordinate> chartData = chartDataList.get(i);
-            ChartController controller = new ChartController(this, chartData, String.valueOf(i + 1));
-            controller.attachChart(chartsContainer);
-            controller.showChart();
-            mChartsControllers.add(controller);
+    private void createChartControllers(ViewGroup chartsContainer) {
+        try {
+            // Followers
+            ChartLinesData<DateCoordinate, LongCoordinate> linesData = ChartDataProvider.getOverviewChartData(this, "1");
+            ChartData chartData = new ChartData(ChartData.CHART_ID_LINES, "Followers", "1", linesData);
+            createChartController(chartData, chartsContainer);
+
+            // Interactions
+            linesData = ChartDataProvider.getOverviewChartData(this, "2");
+            chartData = new ChartData(ChartData.CHART_ID_SCALED_LINES, "Interactions", "2", linesData);
+            createChartController(chartData, chartsContainer);
+
+            // Fruits
+            linesData = ChartDataProvider.getOverviewChartData(this, "3");
+            chartData = new ChartData(ChartData.CHART_ID_STACKED_BARS, "Fruits", "3", linesData);
+            createChartController(chartData, chartsContainer);
+
+            // Views
+            linesData = ChartDataProvider.getOverviewChartData(this, "4");
+            chartData = new ChartData(ChartData.CHART_ID_SINGLE_BAR, "Views", "4", linesData);
+            createChartController(chartData, chartsContainer);
+
+            // Fruits
+            linesData = ChartDataProvider.getOverviewChartData(this, "5");
+            chartData = new ChartData(ChartData.CHART_ID_AREAS,"Fruits","5", linesData);
+            createChartController(chartData, chartsContainer);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
         // Add some space after the last chart
         mBottomSpace = new View(this);
         mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, PADDING_GENERAL)));
         chartsContainer.addView(mBottomSpace);
+    }
+
+    private void createChartController(ChartData chartData, ViewGroup chartsContainer) {
+        ChartController controller = new ChartController(this, chartData);
+        controller.attachChart(chartsContainer);
+        controller.showChart();
+        mChartsControllers.add(controller);
     }
 
     private static ViewGroup createHeaderView(Context ctx) {
@@ -169,8 +189,8 @@ public class MainActivity extends Activity {
     private void applyCurrentColors(boolean animate) {
         int duration = animate ? APP_MODE_ANIM_DURATION : 0;
 
-        AppDesign.Theme prevTheme = mTheme.invertedTheme();
-        AppDesign.Theme curTheme = mTheme;
+        AppDesign.Theme prevTheme = AppDesign.getTheme().invertedTheme();
+        AppDesign.Theme curTheme = AppDesign.getTheme();
 
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
@@ -184,7 +204,7 @@ public class MainActivity extends Activity {
                 });
 
         for (ChartController controller : mChartsControllers) {
-            controller.applyCurrentColors(mTheme, animate);
+            controller.applyCurrentColors(curTheme, animate);
         }
     }
 

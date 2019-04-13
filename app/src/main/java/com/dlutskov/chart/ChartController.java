@@ -7,6 +7,8 @@ import android.widget.LinearLayout;
 
 import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
+import com.dlutskov.chart.view.ChartHeaderView;
+import com.dlutskov.chart_lib.ChartBounds;
 import com.dlutskov.chart_lib.ChartFullView;
 import com.dlutskov.chart_lib.ChartPreviewView;
 import com.dlutskov.chart_lib.ChartView;
@@ -33,32 +35,42 @@ public class ChartController implements
         ChartCheckBoxesContainer.Listener,
         ChartFullView.Listener<DateCoordinate, LongCoordinate> {
 
-    private static final float CHART_PREVIEW_MIN_SELECTED_WIDTH = 0.2f;
+    private static final float CHART_PREVIEW_MIN_SELECTED_WIDTH = 0.15f;
 
     private final MainActivity mActivity;
-    private final ChartLinesData<DateCoordinate, LongCoordinate> mChartData;
-    private final String mAssetsDataFolder;
+    private final ChartData mChartData;
+
+    private ChartLinesData<DateCoordinate, LongCoordinate> mCurrentChartLinesData;
 
     private View mTopSpaceView;
+    private ChartHeaderView mHeaderView;
     private ChartFullView<DateCoordinate, LongCoordinate> mChartView;
     private ChartPreviewView<DateCoordinate, LongCoordinate> mChartPreview;
     private ChartCheckBoxesContainer mCheckBoxesContainer;
 
+    private ChartBounds<DateCoordinate, LongCoordinate> mCollapsedChartBounds;
+
+    private boolean isExpanded;
+
     // TODO Hotfix. For aplying app theme
     private ChartYAxisLabelsDrawer mYRightLabelsDrawer;
 
-    ChartController(MainActivity activity,
-                    ChartLinesData<DateCoordinate, LongCoordinate> chartData,
-                    String assetsDataFolder) {
+    ChartController(MainActivity activity, ChartData chartData) {
         mActivity = activity;
         mChartData = chartData;
-        mAssetsDataFolder = assetsDataFolder;
+        mCurrentChartLinesData = chartData.linesData;
     }
 
     void attachChart(ViewGroup container) {
         mTopSpaceView = new View(mActivity);
         mTopSpaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(mActivity, 16)));
         container.addView(mTopSpaceView);
+
+        // Chart header
+        mHeaderView = createChartHeaderView(mActivity);
+        mHeaderView.setTitleText(mChartData.name);
+        mHeaderView.setTitleClickListener(v -> onHeaderTitleClicked());
+        container.addView(mHeaderView);
 
         // Chart Full View
         mChartView = createChartFullView(mActivity);
@@ -76,17 +88,17 @@ public class ChartController implements
     }
 
     void showChart() {
-        initChartDrawers(mChartData);
-        int pointsSize = mChartData.getXPoints().getPoints().size();
+        initChartDrawers(mCurrentChartLinesData);
+        int pointsSize = mCurrentChartLinesData.getXPoints().getPoints().size();
         int leftBound = (int) (pointsSize * (1 - CHART_PREVIEW_MIN_SELECTED_WIDTH));
         int rightBound = pointsSize - 1;
         // Update full chart
-        mChartView.updateChartData(mChartData, leftBound, rightBound, false);
+        mChartView.updateChartData(mCurrentChartLinesData, leftBound, rightBound, false);
         // Update preview chart with default bounds
-        mChartPreview.updateChartData(mChartData, false);
+        mChartPreview.updateChartData(mCurrentChartLinesData, false);
         mChartPreview.updateSelectedAreaBounds(leftBound, rightBound, rightBound - leftBound);
         // Create new checkboxes for new data
-        mCheckBoxesContainer.createCheckBoxes(mChartData);
+        mCheckBoxesContainer.createCheckBoxes(mCurrentChartLinesData);
     }
 
     private void initChartDrawers(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
@@ -96,13 +108,13 @@ public class ChartController implements
             mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
         } else if (chartData.isYScaled()) {
             // Bind yLabelsDrawer to first graph
-            ChartPointsData<LongCoordinate> firstGraph = mChartData.getYPoints().get(0);
+            ChartPointsData<LongCoordinate> firstGraph = mCurrentChartLinesData.getYPoints().get(0);
             mChartView.getYLabelsDrawer().setScaledPointsId(firstGraph.getId(), firstGraph.getColor());
 
             // Create yLabelsDrawer for the second graph
             mYRightLabelsDrawer = new ChartYAxisLabelsDrawer(mChartView, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
             mYRightLabelsDrawer.setSide(ChartYAxisLabelsDrawer.SIDE_RIGHT);
-            ChartPointsData<LongCoordinate> secondGraph = mChartData.getYPoints().get(1);
+            ChartPointsData<LongCoordinate> secondGraph = mCurrentChartLinesData.getYPoints().get(1);
             mYRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
             mChartView.addDrawer(mYRightLabelsDrawer);
         }
@@ -125,6 +137,13 @@ public class ChartController implements
             return new ChartScaledLinesDrawer<>(chartView);
         }
         return new ChartLinesDrawer<>(chartView);
+    }
+
+    private void updateHeaderBoundsText(int minXIndex, int maxXIndex) {
+        String fromText = mCurrentChartLinesData.getXPoints().getPoints().get(minXIndex).getHeaderName();
+        String toText = mCurrentChartLinesData.getXPoints().getPoints().get(maxXIndex).getHeaderName();
+        String areaText = fromText.equals(toText) ? fromText : fromText + " - " + toText;
+        mHeaderView.setAreaTitleText(areaText);
     }
 
     void applyCurrentColors(AppDesign.Theme curTheme, boolean animate) {
@@ -195,11 +214,29 @@ public class ChartController implements
                 AppDesign.textCheckBox(curTheme), duration, updatedColor -> {
                     mCheckBoxesContainer.setTextColor(updatedColor);
                 });
+
+        // Header text
+        if (isExpanded) {
+            AppDesign.applyColorWithAnimation(AppDesign.getZoomOutText(prevTheme),
+                    AppDesign.getZoomOutText(curTheme), duration, updatedColor -> {
+                        mHeaderView.setTitleColor(updatedColor);
+                    });
+        } else {
+            AppDesign.applyColorWithAnimation(AppDesign.getChartHeaderText(prevTheme),
+                    AppDesign.getChartHeaderText(curTheme), duration, updatedColor -> {
+                        mHeaderView.setTitleColor(updatedColor);
+                    });
+        }
+        AppDesign.applyColorWithAnimation(AppDesign.getChartHeaderText(prevTheme),
+                AppDesign.getChartHeaderText(curTheme), duration, updatedColor -> {
+                    mHeaderView.setAreaTitleColor(updatedColor);
+                });
     }
 
     @Override
     public void onChartPreviewAreaChanged(int minXIndex, int maxXIndex) {
         mChartView.updateHorizontalBounds(minXIndex, maxXIndex);
+        updateHeaderBoundsText(minXIndex, maxXIndex);
     }
 
     @Override
@@ -210,12 +247,12 @@ public class ChartController implements
 
     @Override
     public void onExpandChartClicked(ChartFullView<DateCoordinate, LongCoordinate> view, int pointsIndex) {
-        long timeStamp = mChartData.getXPoints().getPoints().get(pointsIndex).getValue();
+        long timeStamp = mCurrentChartLinesData.getXPoints().getPoints().get(pointsIndex).getValue();
         mActivity.setProgressVisibility(View.VISIBLE);
         new Thread(() -> {
             ChartLinesData<DateCoordinate, LongCoordinate> expandedData = null;
             try {
-                expandedData = ChartDataProvider.getExpandedChartData(mChartView.getContext(), mAssetsDataFolder, timeStamp);
+                expandedData = ChartDataProvider.getExpandedChartData(mChartView.getContext(), mChartData.assetsFolderName, timeStamp);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -225,6 +262,10 @@ public class ChartController implements
                 mActivity.setProgressVisibility(View.GONE);
                 // Hide progress
                 if (finalData != null) {
+                    isExpanded = true;
+
+                    mCollapsedChartBounds = new ChartBounds<>(mChartView.getBounds());
+
                     // Apply local min values for line charts - 0 for bar charts
                     String chartType = finalData.getYPoints().get(0).getType();
                     if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
@@ -238,12 +279,65 @@ public class ChartController implements
                     // Hardcoded positions as we definitely know that there are 3 days before and after selected day
                     int newMinXIndex = 72;
                     int newMaxXIndex = 96;
+                    if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
+                        // Such chart contains all data within 1 dat
+                        newMinXIndex = 0;
+                        newMaxXIndex = finalData.getXPoints().getPoints().size() - 1;
+                    }
+
+                    mCurrentChartLinesData = finalData;
+
+                    updateHeaderBoundsText(newMinXIndex, newMaxXIndex);
+                    mHeaderView.setTitleText("Zoom Out"); // TODO Hardcoded
+                    mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
+
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
                     mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, true, createPointsDrawer(finalData, mChartPreview));
                 }
             });
         }).start();
 
+    }
+
+    private void onHeaderTitleClicked() {
+        if (!isExpanded || mChartView.isDataAnimatorRunning()) {
+            return;
+        }
+
+        if (isExpanded) {
+            // Collapse
+            isExpanded = false;
+
+            mCurrentChartLinesData = mChartData.linesData;
+            // Apply local min values for line charts - 0 for bar charts
+            String chartType = mCurrentChartLinesData.getYPoints().get(0).getType();
+            if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
+                mChartView.setMinYValue(LongCoordinate.valueOf(0));
+                mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
+            } else {
+                mChartView.setMinYValue(null);
+                mChartPreview.setMinYValue(null);
+            }
+
+            int newMinXIndex = mCollapsedChartBounds.getMinXIndex();
+            int newMaxXIndex = mCollapsedChartBounds.getMaxXIndex();
+
+            updateHeaderBoundsText(newMinXIndex, newMaxXIndex);
+            mHeaderView.setTitleText(mChartData.name);
+            mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
+
+            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds);
+            mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, true, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
+        }
+    }
+
+    private static ChartHeaderView createChartHeaderView(Context ctx) {
+        ChartHeaderView headerView = new ChartHeaderView(ctx);
+        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
+        params.setMargins(margin, margin, margin, margin / 2);
+        headerView.setLayoutParams(params);
+        return headerView;
     }
 
     private static ChartFullView<DateCoordinate, LongCoordinate> createChartFullView(Context ctx) {

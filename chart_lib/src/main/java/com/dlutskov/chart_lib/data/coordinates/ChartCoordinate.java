@@ -70,6 +70,11 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
     String getAxisName();
 
     /**
+     * @return Name which will be displayed as the interval in the chart header
+     */
+    String getHeaderName();
+
+    /**
      * Used to be displayed in Points Details window
      * @return Full name which represents current coordinate as a string
      */

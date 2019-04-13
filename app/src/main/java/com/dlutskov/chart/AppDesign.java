@@ -27,6 +27,9 @@ public class AppDesign {
     private static final int COLOR_GRAY3_80  = Color.argb(200, 245, 248, 249);
     private static final int COLOR_BLUE1_20   = Color.argb(100,81, 125, 162);
 
+    private static final int ZOOM_OUT_TEXT_DAY = Color.parseColor("#108BE3");
+    private static final int ZOOM_OUT_TEXT_NIGHT = Color.parseColor("#48AAF0");
+
     public enum Theme {
         DAY,
         NIGHT;
@@ -42,6 +45,16 @@ public class AppDesign {
 
     public interface ColorUpdatePredicate {
         void onColorUpdated(int updatedColor);
+    }
+
+    private static AppDesign.Theme sTheme = AppDesign.Theme.DAY;
+
+    public static AppDesign.Theme getTheme() {
+        return sTheme;
+    }
+
+    public static void switchTheme() {
+        sTheme = sTheme.invertedTheme();
     }
     
     public static int bgActivity(Theme theme) {
@@ -102,6 +115,20 @@ public class AppDesign {
     }
 
     public static int chartPointsDetailsXLabel(Theme theme) {
+        switch (theme) {
+            case NIGHT: return Color.WHITE;
+        }
+        return Color.BLACK;
+    }
+
+    public static int getZoomOutText(Theme theme) {
+        switch (theme) {
+            case NIGHT: return ZOOM_OUT_TEXT_NIGHT;
+        }
+        return ZOOM_OUT_TEXT_DAY;
+    }
+
+    public static int getChartHeaderText(Theme theme) {
         switch (theme) {
             case NIGHT: return Color.WHITE;
         }

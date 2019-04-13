@@ -15,7 +15,7 @@ import com.dlutskov.chart_lib.utils.ChartUtils;
 public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartLinesDrawer<X, Y> {
 
     // MAX Alpha of rect which will cover unselected bars
-    private static final int UNSELECTED_BARS_COVER_ALPHA = 100;
+    private static final int UNSELECTED_BARS_COVER_ALPHA = 160;
 
     // Paint which will be used to draw semi-transparent rect above unselected bars
     private Paint mCoverPaint;

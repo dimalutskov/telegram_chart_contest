@@ -88,7 +88,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mCornerRadius = ChartUtils.getPixelForDp(ctx, 4);
         mTextSize = ChartUtils.getPixelForDp(ctx, 12);
         mVerticalMargin = ChartUtils.getPixelForDp(ctx, 8);
-        mHorizontalMargin = ChartUtils.getPixelForDp(ctx, 8);
+        mHorizontalMargin = ChartUtils.getPixelForDp(ctx, 12);
         mVerticalPadding = ChartUtils.getPixelForDp(ctx, 6);
         mHorizontalPadding = ChartUtils.getPixelForDp(ctx, 6);
         mLabelVerticalPadding = ChartUtils.getPixelForDp(ctx, 4);
@@ -176,11 +176,15 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         int viewWidth = (int) mWidth + mHorizontalPadding * 2;
         int viewHeight = mVerticalPadding + mTextSize * (visibleLinesCount + 1) + mLabelVerticalPadding * (visibleLinesCount + 1) + mVerticalPadding;
 
-        float xPosition = xPointsPosition + mHorizontalMargin;
+        float xPosition = xPointsPosition < drawingRect.width() / 2
+                ? xPointsPosition + mHorizontalMargin
+                : xPointsPosition - viewWidth - mHorizontalMargin;
         float yPosition = mVerticalMargin;
 
         if (xPosition + viewWidth > drawingRect.right - mHorizontalMargin) {
             xPosition = drawingRect.right - mHorizontalMargin - viewWidth;
+        } else if (xPosition <= 0) {
+            xPosition = 0;
         }
 
         // Draw background

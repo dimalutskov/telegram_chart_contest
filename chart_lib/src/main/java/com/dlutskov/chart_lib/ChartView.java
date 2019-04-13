@@ -134,8 +134,10 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     protected void onDataDisapearanceAnimatorUpdate(float progress) {
-        int alpha = (int) (255 * (1 - progress));
-        mDisappearingPointsDrawer.setPointsAlpha(alpha);
+        if (mDisappearingPointsDrawer != null) {
+            int alpha = (int) (255 * (1 - progress));
+            mDisappearingPointsDrawer.setPointsAlpha(alpha);
+        }
     }
 
     protected ValueAnimator getDataAppearingAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
@@ -262,8 +264,12 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         resultBounds.update(minXIndex, maxXIndex, mYBoundsPair.first, mYBoundsPair.second);
     }
 
-    protected boolean isDataAnimatorRunning() {
+    public boolean isDataAnimatorRunning() {
         return mDataUpdateAnimator != null && mDataUpdateAnimator.isRunning();
+    }
+
+    public ChartBounds<X, Y> getBounds() {
+        return mBounds;
     }
 
     public ChartPointsDrawer<X, Y, ?> getPointsDrawer() {
