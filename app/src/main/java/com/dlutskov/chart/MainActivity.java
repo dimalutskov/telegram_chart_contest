@@ -15,10 +15,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.dlutskov.chart.data.ChartDataProvider;
-import com.dlutskov.chart.view.ChartCheckBoxesContainer;
 import com.dlutskov.chart.view.MoonIconView;
-import com.dlutskov.chart_lib.ChartFullView;
-import com.dlutskov.chart_lib.ChartPreviewView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
@@ -49,6 +46,7 @@ public class MainActivity extends Activity {
 
     private ViewGroup mHeaderLayout;
     private MoonIconView mIconMoon;
+    private View mBottomSpace;
 
     private View mProgress;
 
@@ -125,33 +123,17 @@ public class MainActivity extends Activity {
     }
 
     private void createChartControllers(List<ChartLinesData<DateCoordinate, LongCoordinate>> chartDataList, ViewGroup chartsContainer) {
-        int margin = ChartUtils.getPixelForDp(this, PADDING_GENERAL * 2);
-
-        View spaceView = new View(this);
-        spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin / 2));
-        chartsContainer.addView(spaceView);
-
         for (int i = 0; i < chartDataList.size(); i++) {
             ChartLinesData<DateCoordinate, LongCoordinate> chartData = chartDataList.get(i);
-            // Chart Full View
-            ChartFullView<DateCoordinate, LongCoordinate> chartView = createChartFullView(this);
-            chartsContainer.addView(chartView);
-            // Chart Preview
-            ChartPreviewView<DateCoordinate, LongCoordinate> chartPreview = createChartPreviewView(this);
-            chartsContainer.addView(chartPreview);
-            // Chart CheckBoxes
-            ChartCheckBoxesContainer checkboxesContainer = createCheckboxesContainer(this);
-            chartsContainer.addView(checkboxesContainer);
-
-            spaceView = new View(this);
-            spaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, margin));
-            chartsContainer.addView(spaceView);
-
-            ChartController controller = new ChartController(this, chartData, String.valueOf(i + 1),
-                    chartView, chartPreview, checkboxesContainer);
+            ChartController controller = new ChartController(this, chartData, String.valueOf(i + 1));
+            controller.attachChart(chartsContainer);
             controller.showChart();
             mChartsControllers.add(controller);
         }
+        // Add some space after the last chart
+        mBottomSpace = new View(this);
+        mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, PADDING_GENERAL)));
+        chartsContainer.addView(mBottomSpace);
     }
 
     private static ViewGroup createHeaderView(Context ctx) {
@@ -182,40 +164,6 @@ public class MainActivity extends Activity {
         containerView.addView(moonIconView);
 
         return containerView;
-    }
-
-    private static ChartFullView<DateCoordinate, LongCoordinate> createChartFullView(Context ctx) {
-        ChartFullView<DateCoordinate, LongCoordinate> view = new ChartFullView<>(ctx);
-        int height = ChartUtils.getPixelForDp(ctx, 220);
-        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
-        params.leftMargin = margin;
-        params.rightMargin = margin;
-        view.setLayoutParams(params);
-        // Styling
-        view.setLabelsTextSize(ChartUtils.getPixelForDp(ctx, 12));
-        return view;
-    }
-
-    private static ChartPreviewView<DateCoordinate, LongCoordinate> createChartPreviewView(Context ctx) {
-        ChartPreviewView<DateCoordinate, LongCoordinate> view = new ChartPreviewView<>(ctx);
-        int height = ChartUtils.getPixelForDp(ctx, 40);
-        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
-        params.setMargins(margin, margin, margin, margin);
-        view.setLayoutParams(params);
-        return view;
-    }
-
-    private static ChartCheckBoxesContainer createCheckboxesContainer(Context ctx) {
-        ChartCheckBoxesContainer view = new ChartCheckBoxesContainer(ctx);
-        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
-        params.topMargin = ChartUtils.getPixelForDp(ctx, 4);
-        params.leftMargin = margin;
-        params.rightMargin = margin;
-        view.setLayoutParams(params);
-        return view;
     }
 
     private void applyCurrentColors(boolean animate) {

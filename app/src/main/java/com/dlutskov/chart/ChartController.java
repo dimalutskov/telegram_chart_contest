@@ -1,6 +1,9 @@
 package com.dlutskov.chart;
 
+import android.content.Context;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
 
 import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.ChartCheckBoxesContainer;
@@ -19,6 +22,11 @@ import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
+import com.dlutskov.chart_lib.utils.ChartUtils;
+
+import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+import static com.dlutskov.chart.MainActivity.PADDING_GENERAL;
 
 public class ChartController implements
         ChartPreviewView.Listener,
@@ -31,25 +39,36 @@ public class ChartController implements
     private final ChartLinesData<DateCoordinate, LongCoordinate> mChartData;
     private final String mAssetsDataFolder;
 
-    private final ChartFullView<DateCoordinate, LongCoordinate> mChartView;
-    private final ChartPreviewView<DateCoordinate, LongCoordinate> mChartPreview;
-    private final ChartCheckBoxesContainer mCheckBoxesContainer;
+    private View mTopSpaceView;
+    private ChartFullView<DateCoordinate, LongCoordinate> mChartView;
+    private ChartPreviewView<DateCoordinate, LongCoordinate> mChartPreview;
+    private ChartCheckBoxesContainer mCheckBoxesContainer;
 
     // TODO Hotfix. For aplying app theme
     private ChartYAxisLabelsDrawer mYRightLabelsDrawer;
 
     ChartController(MainActivity activity,
                     ChartLinesData<DateCoordinate, LongCoordinate> chartData,
-                    String assetsDataFolder,
-                    ChartFullView<DateCoordinate, LongCoordinate> chartView,
-                    ChartPreviewView<DateCoordinate, LongCoordinate> chartPreview,
-                    ChartCheckBoxesContainer checkBoxesContainer) {
+                    String assetsDataFolder) {
         mActivity = activity;
         mChartData = chartData;
         mAssetsDataFolder = assetsDataFolder;
-        mChartView = chartView;
-        mChartPreview = chartPreview;
-        mCheckBoxesContainer = checkBoxesContainer;
+    }
+
+    void attachChart(ViewGroup container) {
+        mTopSpaceView = new View(mActivity);
+        mTopSpaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(mActivity, 16)));
+        container.addView(mTopSpaceView);
+
+        // Chart Full View
+        mChartView = createChartFullView(mActivity);
+        container.addView(mChartView);
+        // Chart Preview
+        mChartPreview = createChartPreviewView(mActivity);
+        container.addView(mChartPreview);
+        // Chart CheckBoxes
+        mCheckBoxesContainer = createCheckboxesContainer(mActivity);
+        container.addView(mCheckBoxesContainer);
 
         mChartView.setListener(this);
         mChartPreview.setListener(this);
@@ -206,16 +225,58 @@ public class ChartController implements
                 mActivity.setProgressVisibility(View.GONE);
                 // Hide progress
                 if (finalData != null) {
-                    ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> pointsDrawer = createPointsDrawer(finalData, mChartView);
+                    // Apply local min values for line charts - 0 for bar charts
+                    String chartType = finalData.getYPoints().get(0).getType();
+                    if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
+                        mChartView.setMinYValue(LongCoordinate.valueOf(0));
+                        mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
+                    } else {
+                        mChartView.setMinYValue(null);
+                        mChartPreview.setMinYValue(null);
+                    }
+
                     // Hardcoded positions as we definitely know that there are 3 days before and after selected day
                     int newMinXIndex = 72;
                     int newMaxXIndex = 96;
-                    mChartView.expand(pointsDrawer, finalData, pointsIndex, newMinXIndex, newMaxXIndex);
-                    // TODO Preview
-                    mChartPreview.updateChartData(finalData, newMinXIndex, newMaxXIndex, true);
+                    mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
+                    mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, true, createPointsDrawer(finalData, mChartPreview));
                 }
             });
         }).start();
 
+    }
+
+    private static ChartFullView<DateCoordinate, LongCoordinate> createChartFullView(Context ctx) {
+        ChartFullView<DateCoordinate, LongCoordinate> view = new ChartFullView<>(ctx);
+        int height = ChartUtils.getPixelForDp(ctx, 220);
+        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
+        params.leftMargin = margin;
+        params.rightMargin = margin;
+        view.setLayoutParams(params);
+        // Styling
+        view.setLabelsTextSize(ChartUtils.getPixelForDp(ctx, 12));
+        return view;
+    }
+
+    private static ChartPreviewView<DateCoordinate, LongCoordinate> createChartPreviewView(Context ctx) {
+        ChartPreviewView<DateCoordinate, LongCoordinate> view = new ChartPreviewView<>(ctx);
+        int height = ChartUtils.getPixelForDp(ctx, 40);
+        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, height);
+        params.setMargins(margin, margin, margin, margin);
+        view.setLayoutParams(params);
+        return view;
+    }
+
+    private static ChartCheckBoxesContainer createCheckboxesContainer(Context ctx) {
+        ChartCheckBoxesContainer view = new ChartCheckBoxesContainer(ctx);
+        int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
+        params.topMargin = ChartUtils.getPixelForDp(ctx, 4);
+        params.leftMargin = margin;
+        params.rightMargin = margin;
+        view.setLayoutParams(params);
+        return view;
     }
 }

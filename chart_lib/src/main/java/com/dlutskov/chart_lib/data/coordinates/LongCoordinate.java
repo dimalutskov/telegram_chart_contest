@@ -126,3 +126,4 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
 }
 // TODO Crash on empty
 // ChartPreview
+// Y proper points

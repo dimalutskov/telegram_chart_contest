@@ -56,7 +56,8 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private float mMinWidth;
 
-    private float mWidth; // TODO
+    // Window width excluding horizontal paddings
+    private float mWidth;
 
     // Maximum alpha value of window background
     private int mMaxBackgroundAlpha;
@@ -141,7 +142,10 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mData = data;
         mBounds = bounds;
 
-        float maxLabelWidth = 0;
+        X maxX = data.getXPoints().getMaxValue();
+        String xLabelText = isExpandedPoints ? maxX.getFullName() + " " + maxX.getExpandedName() : maxX.getFullName();
+        float maxLabelWidth = mXLabelTextPaint.measureText(xLabelText) + ChartUtils.getDpForPixel(mChartView.getContext(), 20);
+
         for (ChartPointsData chartPointsData : data.getYPoints()) {
             if (mHiddenChartLines.contains(chartPointsData.getId())) continue;
             float textWidth = mLabelTextPaint.measureText(chartPointsData.getName());
@@ -193,7 +197,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         // Draw X label
         mXLabelTextPaint.setAlpha(mCurrentAlpha);
         X xPoint = mData.getXPoints().getPoints().get(mSelectedPointPosition);
-        String xLabel = isExpandedPoints ? xPoint.getExpandedName() : xPoint.getFullName();
+        String xLabel = isExpandedPoints ? xPoint.getFullName() + " " + xPoint.getExpandedName() : xPoint.getFullName();
         canvas.drawText(xLabel, leftX, yPosition, mXLabelTextPaint);
 
         // Draw > glyph

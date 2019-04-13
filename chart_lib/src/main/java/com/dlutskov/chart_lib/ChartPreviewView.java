@@ -63,6 +63,10 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
      */
     private int mMinXPointsCount;
 
+    // Used for data update animator
+    private int mSelectedMinXIndexTarget, mSelectedMaxXIndexTarget, mMinXPointsCountTarget;
+    private int mSelectedMinXIndexInitial, mSelectedMaxXIndexInitial, mMinXPointsCountInitial;
+
     // Left Right bounds reflected as canvas coordinate values
     private float mAreaLeftBound = -1;
     private float mAreaRightBound = -1;
@@ -126,23 +130,51 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
         mAreaBordersPaint = new Paint();
         mSelectedAreaBackgroundPaint.setStyle(Paint.Style.FILL);
         mAreaBordersPaint.setColor(Color.DKGRAY);
+
+        setPadding(0, 0, 0, 0);
     }
 
     @Override
-    public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
-        super.updateChartData(chartData, minXIndex, maxXindex, keepHiddenChartLines);
+    protected void updateChartDataInternal(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
+        super.updateChartDataInternal(chartData, 0, chartData.getXPoints().getPoints().size() - 1, keepHiddenChartLines);
 
         mXPointsCount = chartData.getXPoints().getPoints().size();
 
-        mSelectedMinXIndex = minXIndex;
-        mSelectedMaxXIndex = maxXindex;
+        if (isDataAnimatorRunning()) {
+            // Do not update current border positions - store it it target positions
+            // which will be updated with animation
+            mSelectedMinXIndexTarget = minXIndex;
+            mSelectedMaxXIndexTarget = maxXindex;
+            mMinXPointsCountTarget = maxXindex - minXIndex;
 
-        mMinXPointsCount = Math.max(mMinXPointsCount, mSelectedMaxXIndex - mSelectedMinXIndex);
+            mSelectedMinXIndex = coordinateToIndex(mAreaLeftBound);
+            mSelectedMaxXIndex = coordinateToIndex(mAreaRightBound);
+            mMinXPointsCount = mSelectedMaxXIndex - mSelectedMinXIndex;
 
-        if (getWidth() != 0) {
-            // Calculate coordinates if view was already drawn - if no - it'll be calculated in updatePointsDrawingRect
-            calculateCurrentCoordinates();
+            mSelectedMinXIndexInitial = mSelectedMinXIndex;
+            mSelectedMaxXIndexInitial = mSelectedMaxXIndex;
+            mMinXPointsCountInitial = mMinXPointsCount;
+        } else {
+            mSelectedMinXIndex = minXIndex;
+            mSelectedMaxXIndex = maxXindex;
+            mMinXPointsCount = maxXindex - minXIndex;
+
+            if (getWidth() != 0) {
+                // Calculate coordinates if view was already drawn - if no - it'll be calculated in updatePointsDrawingRect
+                calculateCurrentCoordinates();
+            }
         }
+    }
+
+    @Override
+    protected void onDataAppearanceAnimatorUpdate(float progress) {
+        super.onDataAppearanceAnimatorUpdate(progress);
+
+        mSelectedMinXIndex = (int) (mSelectedMinXIndexInitial + (mSelectedMinXIndexTarget - mSelectedMinXIndexInitial) *  progress);
+        mSelectedMaxXIndex = (int) (mSelectedMaxXIndexInitial + (mSelectedMaxXIndexTarget - mSelectedMaxXIndexInitial) * progress);
+        mMinXPointsCount = (int) (mMinXPointsCountInitial + (mMinXPointsCountTarget - mMinXPointsCountInitial) * progress);
+        calculateCurrentCoordinates();
+        invalidate();
     }
 
     public void updateSelectedAreaBounds(int minXIndex, int maxXIndex, int minXPointsCount) {
@@ -202,6 +234,10 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
+        if (isDataAnimatorRunning()) {
+            return super.onInterceptTouchEvent(event);
+        }
+
         float x = event.getX();
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -233,6 +269,10 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (isDataAnimatorRunning()) {
+            return super.onTouchEvent(event);
+        }
+
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_MOVE:
                 if (mSlideType != SlideType.NONE) {

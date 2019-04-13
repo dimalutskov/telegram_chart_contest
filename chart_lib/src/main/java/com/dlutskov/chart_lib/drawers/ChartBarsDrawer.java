@@ -79,6 +79,10 @@ public class ChartBarsDrawer<X extends ChartCoordinate, Y extends ChartCoordinat
         }
     }
 
+    protected int getDrawDataAlpha(DrawingData<Y> drawingData) {
+        return mPointsAlpha;
+    }
+
     @Override
     protected void drawSelectedPoints(Canvas canvas, Rect drawingRect, float xPosition) {
         // Only selected bar will be with 100% opacity

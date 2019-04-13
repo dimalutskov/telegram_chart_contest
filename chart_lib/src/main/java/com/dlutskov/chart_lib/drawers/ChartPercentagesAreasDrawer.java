@@ -41,43 +41,43 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
         int lineIndex = 0;
         for (int i = bounds.getMinXIndex(); i < bounds.getMaxXIndex(); i++) {
             boolean maxValueInited = false;
-//            for (ChartPointsData<Y> pointsData : data.getYPoints()) {
-//                // Create drawing data if it's not exists
-//                DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-//                if (drawingData == null) {
-//                    drawingData = new DrawingData<>(pointsData, ChartUtils.getPixelForDp(mChartView.getContext(), 1));
-//                    this.drawingDataList.add(drawingData);
-//                }
-//
-//                if (!drawingData.isVisible()) continue;
-//
-//                // Calculate Y value according to visibility
-//                Y yPoint = pointsData.getPoints().get(i);
-//                if (mLocalYValue == null) {
-//                    mLocalYValue = (Y) yPoint.clone();
-//                } else {
-//                    mLocalYValue.set(yPoint);
-//                }
-//                yPoint.getPart(drawingData.getAlpha() / (float)255, mLocalYValue);
-//
-//                // Add y value to sum
-//                if (!maxValueInited) {
-//                    // Set first value to local max value object
-//                    maxValueInited = true;
-//                    if (mLocalMaxValue == null) {
-//                        mLocalMaxValue = (Y) mLocalYValue.clone();
-//                    } else {
-//                        mLocalMaxValue.set(mLocalYValue);
-//                    }
-//                } else {
-//                    // Add new value to previous value
-//                    mLocalMaxValue.add(mLocalYValue, mLocalMaxValue);
-//                }
-//            }
-//
-//            mLocalBounds.setMaxY(mLocalMaxValue);
+            for (ChartPointsData<Y> pointsData : data.getYPoints()) {
+                // Create drawing data if it's not exists
+                DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
+                if (drawingData == null) {
+                    drawingData = new DrawingData<>(pointsData, ChartUtils.getPixelForDp(mChartView.getContext(), 1));
+                    this.drawingDataList.add(drawingData);
+                }
 
-            drawStackedBars(data, bounds, drawingRect, lineIndex, i);
+                if (!drawingData.isVisible()) continue;
+
+                // Calculate Y value according to visibility
+                Y yPoint = pointsData.getPoints().get(i);
+                if (mLocalYValue == null) {
+                    mLocalYValue = (Y) yPoint.clone();
+                } else {
+                    mLocalYValue.set(yPoint);
+                }
+                yPoint.getPart(drawingData.getAlpha() / (float)255, mLocalYValue);
+
+                // Add y value to sum
+                if (!maxValueInited) {
+                    // Set first value to local max value object
+                    maxValueInited = true;
+                    if (mLocalMaxValue == null) {
+                        mLocalMaxValue = (Y) mLocalYValue.clone();
+                    } else {
+                        mLocalMaxValue.set(mLocalYValue);
+                    }
+                } else {
+                    // Add new value to previous value
+                    mLocalMaxValue.add(mLocalYValue, mLocalMaxValue);
+                }
+            }
+
+            mLocalBounds.setMaxY(mLocalMaxValue);
+
+            drawStackedBars(data, mLocalBounds, drawingRect, lineIndex, i);
 //            buildAreaPathes(data, bounds, drawingRect, i);
             lineIndex += 4;
         }

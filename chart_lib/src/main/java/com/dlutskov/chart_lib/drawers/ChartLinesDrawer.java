@@ -118,7 +118,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
         int linesCount = (getBounds().getMaxXIndex() - getBounds().getMinXIndex()) * 4;
         for (DrawingData<Y> drawingData : drawingDataList) {
             if (drawingData.isVisible()) {
-                drawingData.getPaint().setAlpha(Math.min(mPointsAlpha, drawingData.getAlpha()));
+                drawingData.getPaint().setAlpha(getDrawDataAlpha(drawingData));
                 canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
             }
         }
@@ -126,6 +126,10 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
         if (mSelectedPointIndex > 0 && mSelectedPointAlpha > 0) {
            drawSelectedPoints(canvas, drawingRect, xPointsPosition);
         }
+    }
+
+    protected int getDrawDataAlpha(DrawingData<Y> drawingData) {
+        return Math.min(mPointsAlpha, drawingData.getAlpha());
     }
 
     protected void drawSelectedPoints(Canvas canvas, Rect drawingRect, float xPointsPosition) {
