@@ -20,10 +20,12 @@ import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPieDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartScaledLinesDrawer;
 import com.dlutskov.chart_lib.drawers.ChartStackedBarsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartYAxisLabelsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartYAxisPercentagesDrawers;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
@@ -36,6 +38,8 @@ public class ChartController implements
         ChartFullView.Listener<DateCoordinate, LongCoordinate> {
 
     private static final float CHART_PREVIEW_MIN_SELECTED_WIDTH = 0.15f;
+
+    private static final int CHART_PERCENTAGE_PADDING_TOP = 24; // dp
 
     private final MainActivity mActivity;
     private final ChartData mChartData;
@@ -118,25 +122,47 @@ public class ChartController implements
             mYRightLabelsDrawer.setScaledPointsId(secondGraph.getId(), secondGraph.getColor());
             mChartView.addDrawer(mYRightLabelsDrawer);
         }
+        if (chartData.isPercentage()) {
+            int topPadding = ChartUtils.getPixelForDp(mActivity, CHART_PERCENTAGE_PADDING_TOP);
+            mChartView.setPadding(0, topPadding, 0, 0);
+            mChartView.setYLabelsDrawer(new ChartYAxisPercentagesDrawers<>(mChartView, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT, topPadding));
+        }
+
         mChartView.setPointsDrawer(createPointsDrawer(chartData, mChartView));
         mChartPreview.setPointsDrawer(createPointsDrawer(chartData, mChartPreview));
     }
 
-    private static ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> createPointsDrawer(ChartLinesData<DateCoordinate, LongCoordinate> chartData,
+    private ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> createPointsDrawer(ChartLinesData<DateCoordinate, LongCoordinate> chartData,
                                                                                            ChartView<DateCoordinate, LongCoordinate> chartView) {
         String chartType = chartData.getYPoints().get(0).getType();
+        ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> result;
         if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
             if (chartData.isPercentage()) {
-                return new ChartPercentagesAreasDrawer<>(chartView);
+//                if (chartView == mChartPreview) {
+//                    // TODO optimize
+//                    return new ChartStackedBarsDrawer<>(chartView);
+//                } else {
+                result = new ChartPercentagesAreasDrawer<>(chartView);
+//                }
             } else if (chartData.isStacked()) {
-                return new ChartStackedBarsDrawer<>(chartView);
+                result = new ChartStackedBarsDrawer<>(chartView);
             } else {
-                return new ChartBarsDrawer<>(chartView);
+                result = new ChartBarsDrawer<>(chartView);
             }
         } else if (chartData.isYScaled()) {
-            return new ChartScaledLinesDrawer<>(chartView);
+            result = new ChartScaledLinesDrawer<>(chartView);
+        } else {
+            result = new ChartLinesDrawer<>(chartView);
         }
-        return new ChartLinesDrawer<>(chartView);
+
+        if (result instanceof ChartLinesDrawer) {
+            ((ChartLinesDrawer)result).setSelectedPointsDividerColor(AppDesign.chartGridColor(AppDesign.getTheme()));
+            ((ChartLinesDrawer)result).setSelectedPointCircleBackground(AppDesign.bgActivity(AppDesign.getTheme()));
+        } else if (result instanceof ChartBarsDrawer) {
+            ((ChartBarsDrawer)result).setCoverColor(AppDesign.bgActivity(AppDesign.getTheme()));
+        }
+
+        return result;
     }
 
     private void updateHeaderBoundsText(int minXIndex, int maxXIndex) {
@@ -247,6 +273,11 @@ public class ChartController implements
 
     @Override
     public void onExpandChartClicked(ChartFullView<DateCoordinate, LongCoordinate> view, int pointsIndex) {
+        if (mCurrentChartLinesData.isPercentage()) {
+            expandPercentageChart();
+            return;
+        }
+
         long timeStamp = mCurrentChartLinesData.getXPoints().getPoints().get(pointsIndex).getValue();
         mActivity.setProgressVisibility(View.VISIBLE);
         new Thread(() -> {
@@ -292,11 +323,24 @@ public class ChartController implements
                     mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
-                    mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, true, createPointsDrawer(finalData, mChartPreview));
+                    mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, createPointsDrawer(finalData, mChartPreview));
                 }
             });
         }).start();
 
+    }
+
+    private void expandPercentageChart() {
+        isExpanded = true;
+
+        mCollapsedChartBounds = new ChartBounds<>(mChartView.getBounds());
+
+        mHeaderView.setTitleText("Zoom Out"); // TODO Hardcoded
+        mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
+
+        int minX = mChartView.getBounds().getMinXIndex();
+        int maxX = mChartView.getBounds().getMaxXIndex();
+        mChartView.expand(new ChartPieDrawer<>(mChartView), mCurrentChartLinesData, 0, minX, maxX);
     }
 
     private void onHeaderTitleClicked() {
@@ -307,6 +351,11 @@ public class ChartController implements
         if (isExpanded) {
             // Collapse
             isExpanded = false;
+
+            if (mCurrentChartLinesData.isPercentage()) {
+                collapsePercentagesChart();
+                return;
+            }
 
             mCurrentChartLinesData = mChartData.linesData;
             // Apply local min values for line charts - 0 for bar charts
@@ -327,8 +376,15 @@ public class ChartController implements
             mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
             mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds);
-            mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, true, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
+            mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
         }
+    }
+
+    private void collapsePercentagesChart() {
+        mHeaderView.setTitleText(mChartData.name);
+        mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
+
+        mChartView.collapse(new ChartPercentagesAreasDrawer<>(mChartView), mCurrentChartLinesData, mCollapsedChartBounds);
     }
 
     private static ChartHeaderView createChartHeaderView(Context ctx) {

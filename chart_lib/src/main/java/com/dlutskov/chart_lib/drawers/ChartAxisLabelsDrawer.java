@@ -42,6 +42,9 @@ public abstract class ChartAxisLabelsDrawer<X extends ChartCoordinate, Y extends
 
     protected Paint mLabelPaint;
 
+    // Base max alpha for all labels
+    protected int mAlpha = 255;
+
     ChartAxisLabelsDrawer(ChartView<X, Y> chartView, int size) {
         super(chartView);
         mSize = size;
@@ -79,4 +82,7 @@ public abstract class ChartAxisLabelsDrawer<X extends ChartCoordinate, Y extends
         mLabelPaint.setColor(textColor);
     }
 
+    public void setAlpha(int mAlpha) {
+        this.mAlpha = mAlpha;
+    }
 }

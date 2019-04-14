@@ -11,12 +11,15 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.view.ViewParent;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.drawers.ChartAxisLabelsDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPercentagesAreasDrawer;
+import com.dlutskov.chart_lib.drawers.ChartPieDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPointsDetailsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.drawers.ChartXAxisLabelsDrawer;
@@ -39,6 +42,13 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     public static final long POINTS_DETAILS_DISAPPEARING_DELAY = 3000;
+
+    private static final int AREA_CHART_CLIP_DURATION = 300;
+    private static final int AREA_CHART_ROTATE_DURATION = 500;
+    private static final int PIE_CHART_APPEAR_DELAY = 300;
+    private static final int PIE_CHART_APPEAR_DURATION = 500;
+    private static final int PIE_CHART_OVERSHOT_BACK_DURATION = 800;
+    private static final int PIE_CHART_OVERSHOT_ANGLE = 30;
 
     private ChartXAxisLabelsDrawer<X, Y> mXAxisLabelsDrawer;
     private ChartYAxisLabelsDrawer<X, Y> mYAxisLabelsDrawer;
@@ -73,21 +83,9 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     @Override
-    public void updateHorizontalBounds(int minXIndex, int maxXIndex) {
-        super.updateHorizontalBounds(minXIndex, maxXIndex);
-        if (mPointsDetailsXIndex > 0 && (mPointsDetailsXIndex < minXIndex || mPointsDetailsXIndex > maxXIndex)) {
-            removeCallbacks(mHidePointsDetailsTask);
-            mPointsDetailsAlpha = 0;
-            mPointsDrawer.setSelectedPointAlpha(mPointsDetailsAlpha);
-            mPointsDetailsDrawer.setAlpha(mPointsDetailsAlpha);
-            mPointsDetailsDrawer.setShown(false);
-        }
-    }
-
-    @Override
     protected void init() {
         super.init();
-        mXAxisLabelsDrawer = new ChartXAxisLabelsDrawer<>(this, ChartUtils.getPixelForDp(getContext(), 32));
+        mXAxisLabelsDrawer = new ChartXAxisLabelsDrawer<>(this, ChartUtils.getPixelForDp(getContext(), 28));
         mYAxisLabelsDrawer = new ChartYAxisLabelsDrawer<>(this, ChartAxisLabelsDrawer.SIZE_MATCH_PARENT);
         mYAxisLabelsDrawer.setDrawOverPoints(true);
         mPointsDetailsDrawer = new ChartPointsDetailsDrawer<>(this, false);
@@ -97,6 +95,18 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         addDrawer(mYAxisLabelsDrawer);
         addDrawer(mXAxisLabelsDrawer);
         addDrawer(mPointsDetailsDrawer);
+    }
+
+    @Override
+    public void updateHorizontalBounds(int minXIndex, int maxXIndex) {
+        super.updateHorizontalBounds(minXIndex, maxXIndex);
+        if (mPointsDetailsXIndex > 0 && (mPointsDetailsXIndex < minXIndex || mPointsDetailsXIndex > maxXIndex)) {
+            removeCallbacks(mHidePointsDetailsTask);
+            mPointsDetailsAlpha = 0;
+            mPointsDrawer.setSelectedPointAlpha(mPointsDetailsAlpha);
+            mPointsDetailsDrawer.setAlpha(mPointsDetailsAlpha);
+            mPointsDetailsDrawer.setShown(false);
+        }
     }
 
     @Override
@@ -114,6 +124,15 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     @Override
+    public void updatePointsVisibility(String pointsId, boolean visible) {
+        super.updatePointsVisibility(pointsId, visible);
+        if (mLinesData.getYPoints().size() == mHiddenChartLines.size()) {
+            // Hide points details if there are no visible points
+            instantlyHidePointsDetails();
+        }
+    }
+
+    @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
@@ -124,7 +143,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        if (isDataAnimatorRunning()) {
+        if (isDataAnimatorRunning() || mHiddenChartLines.size() == mLinesData.getYPoints().size()) {
             return super.onTouchEvent(ev);
         }
 
@@ -161,6 +180,13 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         }
     }
 
+    private void instantlyHidePointsDetails() {
+        mPointsDetailsAlpha = 0;
+        mPointsDetailsDrawer.setShown(false);
+        removeCallbacks(mHidePointsDetailsTask);
+        mPointsDrawer.setSelectedPointAlpha(0);
+    }
+
     private void startPointsDetailsAnimator(boolean appear) {
         if (mPointsDetailsAnimator != null) {
             mPointsDetailsAnimator.cancel();
@@ -190,26 +216,41 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         isExpanded = true;
 
         mExpandCollapseAnimator = new AnimatorSet();
-        Animator hideAnimator = createExpandedDisappearingAnimator(selectedXIndex);
-        Animator showAnimator = getDataAppearingAnimator(expandedData, newMinXIndex, newMaxXIndex, true, pointsDrawer);
-        mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
 
+        Animator hideAnimator = mLinesData.isPercentage()
+                ? getExpandHidePercentageAnimator()
+                : getExpandHideAnimator(selectedXIndex);
+
+        Animator showAnimator = mLinesData.isPercentage()
+                ? getExpandShowPercentageAnimator(expandedData, newMinXIndex, newMaxXIndex, (ChartPieDrawer<X, Y>) pointsDrawer)
+                : getShowDataAnimator(expandedData, newMinXIndex, newMaxXIndex, pointsDrawer);
+
+        mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
         mExpandCollapseAnimator.start();
     }
 
     public void collapse(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData, ChartBounds<X, Y> collapsedBounds) {
         isExpanded = false;
 
+        instantlyHidePointsDetails();
+
         mExpandCollapseAnimator = new AnimatorSet();
         mPointsDrawer.setAnimateBoundsChanges(false);
-        Animator hideAnimator = getDataDisappearingAnimator();
-        Animator showAnimator = createCollapsingAppearanceAnimator(pointsDrawer, collapsedData, collapsedBounds);
+
+        Animator hideAnimator = collapsedData.isPercentage()
+                ? getCollapseHidePercentageAnimator()
+                : getHideDataAnimator();
+
+        Animator showAnimator = collapsedData.isPercentage()
+                ? getCollapseShowPercentageAnimator(collapsedData, collapsedBounds, (ChartPercentagesAreasDrawer<X, Y>) pointsDrawer)
+                : getCollapseShowAnimator(pointsDrawer, collapsedData, collapsedBounds);
+
         mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
 
         mExpandCollapseAnimator.start();
     }
 
-    private Animator createExpandedDisappearingAnimator(int xIndex) {
+    private Animator getExpandHideAnimator(int xIndex) {
         // Set current points drawer as disappearing drawer
         mDisappearingPointsDrawer = getPointsDrawer();
         mDisappearingPointsDetailsDrawer = mPointsDetailsDrawer;
@@ -236,15 +277,18 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
             // Hide points details
             mDisappearingPointsDrawer.setSelectedPointAlpha(alpha);
+            mPointsDetailsAlpha = alpha;
             mDisappearingPointsDetailsDrawer.setAlpha(alpha);
 
             // Hide disappearing drawer
-            mDisappearingPointsDrawer.setPointsAlpha(alpha);
+            // Let it disappear 2 times faster
+            mDisappearingPointsDrawer.setPointsAlpha((int) (255 * (1 - Math.min(1, progress * 2))));
 
             // Update horizontal bounds
             calculateCurrentBounds(collapsedData, minXIndex, maxXIndex, disappearingBounds);
             mDisappearingPointsDrawer.updateBounds(prevDisappearingBounds, disappearingBounds);
             prevDisappearingBounds.update(disappearingBounds);
+            invalidate();
         });
         hideAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -258,8 +302,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         return hideAnimator;
     }
 
-    private Animator createCollapsingAppearanceAnimator(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData,
-                                                        ChartBounds<X, Y> collapsedBounds) {
+    private Animator getCollapseShowAnimator(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData,
+                                             ChartBounds<X, Y> collapsedBounds) {
         // Keep references on previous data
         int xPosition = (collapsedBounds.getMaxXIndex() - collapsedBounds.getMinXIndex()) / 2;
         Pair<Y, Y> yBounds = new Pair<>(null, null);
@@ -287,6 +331,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             calculateCurrentBounds(collapsedData, minXIndex, maxXIndex, appearingBounds);
             mPointsDrawer.updateBounds(prevAppearingBounds, appearingBounds);
             prevAppearingBounds.update(appearingBounds);
+            invalidate();
         });
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -308,16 +353,177 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     @Override
-    protected void onDataAppearAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
-        setPointsDetailsDrawer(new ChartPointsDetailsDrawer<>(ChartFullView.this, true));
+    protected void onShowDataAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
+        // Set new point details drawer
+        ChartPointsDetailsDrawer detailsDrawer = new ChartPointsDetailsDrawer<>(ChartFullView.this, true);
+        detailsDrawer.setBackgroundColor(mPointsDetailsDrawer.getBackgroundColor());
+        detailsDrawer.setBackgroundBorderColor(mPointsDetailsDrawer.getBackgroundBorderColor());
+        detailsDrawer.setXLabelColor(mPointsDetailsDrawer.getXLabelColor());
+        setPointsDetailsDrawer(detailsDrawer);
 
-        super.onDataAppearAnimatorStarted(chartData, minXIndex, maxXindex, keepHiddenChartLines, newPointsDrawer);
+        super.onShowDataAnimatorStarted(chartData, minXIndex, maxXindex, newPointsDrawer);
 
         // Reset selected points index
         mPointsDetailsXIndex = -1;
         mPointsDetailsAlpha = 0;
 
-        mXAxisLabelsDrawer.setExpandedPoints(true);
+        if (!mLinesData.isPercentage()) {
+            mXAxisLabelsDrawer.setExpandedPoints(true);
+        }
+    }
+
+    ////////////////////// PERCENTAGES CHART ANIMATORS /////////////////
+
+    private Animator getExpandHidePercentageAnimator() {
+        AnimatorSet result = new AnimatorSet();
+
+        // Set current points drawer as disappearing drawer
+        mDisappearingPointsDrawer = getPointsDrawer();
+        mDisappearingPointsDetailsDrawer = mPointsDetailsDrawer;
+        ChartPercentagesAreasDrawer<X, Y> disappearingPointsDrawer = (ChartPercentagesAreasDrawer<X, Y>) mDisappearingPointsDrawer;
+
+        // Transform drawer to circle
+        ValueAnimator clipAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(AREA_CHART_CLIP_DURATION);
+        clipAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+            disappearingPointsDrawer.setClipValue(progress);
+
+            int alpha = (int) (255 * (1 - progress));
+            // Hide points details
+            mDisappearingPointsDrawer.setSelectedPointAlpha(alpha);
+            mPointsDetailsAlpha = alpha;
+            mDisappearingPointsDetailsDrawer.setAlpha(alpha);
+            // Hide y labels
+            mYAxisLabelsDrawer.setAlpha(alpha);
+            mXAxisLabelsDrawer.setAlpha(alpha);
+            invalidate();
+        });
+        clipAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                removeDrawer(mDisappearingPointsDetailsDrawer);
+                mDisappearingPointsDetailsDrawer = null;
+            }
+        });
+        clipAnimator.setInterpolator(new AccelerateInterpolator());
+
+        // Rotate and hide circle
+        ValueAnimator rotateAndHideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(AREA_CHART_ROTATE_DURATION);
+        rotateAndHideAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        rotateAndHideAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+
+            disappearingPointsDrawer.setRotationAngle((int) (540 * progress));
+            invalidate();
+        });
+        rotateAndHideAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                mDisappearingPointsDrawer = null;
+            }
+        });
+
+        result.playSequentially(clipAnimator, rotateAndHideAnimator);
+        return result;
+    }
+
+    private Animator getExpandShowPercentageAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXIndex, ChartPieDrawer<X, Y> newPointsDrawer) {
+        AnimatorSet result = new AnimatorSet();
+        result.setStartDelay(PIE_CHART_APPEAR_DELAY);
+
+        ValueAnimator showAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(PIE_CHART_APPEAR_DURATION);
+        showAnimator.setInterpolator(new AccelerateInterpolator());
+        showAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                System.out.println("@@@ START");
+                onShowDataAnimatorStarted(chartData, minXIndex, maxXIndex, newPointsDrawer);
+            }
+        });
+        showAnimator.addUpdateListener(animation -> {
+            System.out.println("@@@ UPDATE");
+            float progress = (float) animation.getAnimatedValue();
+            newPointsDrawer.setPointsAlpha((int) (255 * progress));
+            newPointsDrawer.setRotationAngle((int) ((360 + PIE_CHART_OVERSHOT_ANGLE) * progress));
+        });
+
+
+        ValueAnimator overshotReturnAnimator = ValueAnimator.ofInt(360 + PIE_CHART_OVERSHOT_ANGLE, 360);
+        overshotReturnAnimator.setDuration(PIE_CHART_OVERSHOT_BACK_DURATION);
+        overshotReturnAnimator.addUpdateListener(animation -> {
+            newPointsDrawer.setRotationAngle((Integer) animation.getAnimatedValue());
+            invalidate();
+        });
+
+        result.playSequentially(showAnimator, overshotReturnAnimator);
+        return result;
+    }
+
+    private Animator getCollapseHidePercentageAnimator() {
+        // Set current points drawer as disappearing drawer
+        mDisappearingPointsDrawer = getPointsDrawer();
+        ChartPieDrawer<X, Y> disappearingPointsDrawer = (ChartPieDrawer<X, Y>) mDisappearingPointsDrawer;
+
+        ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(PIE_CHART_APPEAR_DURATION);
+        hideAnimator.setInterpolator(new AccelerateInterpolator());
+        hideAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+            disappearingPointsDrawer.setRotationAngle((int) (360 * (1 - progress)));
+            invalidate();
+        });
+        hideAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                mDisappearingPointsDrawer = null;
+            }
+        });
+
+        return hideAnimator;
+    }
+
+    private Animator getCollapseShowPercentageAnimator(ChartLinesData<X, Y> chartData, ChartBounds<X, Y> bounds,
+                                                       ChartPercentagesAreasDrawer<X, Y> newPointsDrawer) {
+        AnimatorSet result = new AnimatorSet();
+        result.setStartDelay(PIE_CHART_APPEAR_DELAY);
+
+        // Rotate and show circle
+        ValueAnimator rotateAndHideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(AREA_CHART_ROTATE_DURATION);
+        rotateAndHideAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        rotateAndHideAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+
+            int alpha = (int) (255 * progress);
+            newPointsDrawer.setPointsAlpha(alpha);
+            newPointsDrawer.setRotationAngle((int) (540 * (1 - progress)));
+            invalidate();
+        });
+        rotateAndHideAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                super.onAnimationStart(animation);
+                onShowDataAnimatorStarted(chartData, bounds.getMinXIndex(), bounds.getMaxXIndex(), newPointsDrawer);
+                newPointsDrawer.setClipValue(1f);
+            }
+        });
+
+        // Transform drawer to circle
+        ValueAnimator clipAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(AREA_CHART_CLIP_DURATION);
+        clipAnimator.addUpdateListener(animation -> {
+            float progress = (float) animation.getAnimatedValue();
+            newPointsDrawer.setClipValue(1 - progress);
+
+            int alpha = (int) (255 * progress);
+            // Show y labels
+            mYAxisLabelsDrawer.setAlpha(alpha);
+            mXAxisLabelsDrawer.setAlpha(alpha);
+            invalidate();
+        });
+        clipAnimator.setInterpolator(new AccelerateInterpolator());
+
+        result.playSequentially(rotateAndHideAnimator, clipAnimator);
+        return result;
     }
 
     /////////////////////////////////////////////////////

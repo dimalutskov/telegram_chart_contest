@@ -23,11 +23,10 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
 
     private RectF mRect = new RectF();
 
-    private int mVerticalPadding;
+    private int mRotationAngle = 0;
 
     public ChartPieDrawer(ChartView chartView) {
         super(chartView);
-        mVerticalPadding = ChartUtils.getPixelForDp(chartView.getContext(), 6);
     }
 
     @Override
@@ -70,26 +69,42 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
 
     @Override
     protected void onDraw(Canvas canvas, Rect drawingRect) {
-        int centerX = drawingRect.width() / 2;
-        int centerY = drawingRect.height() / 2;
-        float size = centerY - mVerticalPadding;
+        float centerX = drawingRect.width() / 2;
+        float centerY = drawingRect.height() / 2 + mChartView.getPaddingTop();
+        float size = drawingRect.height() / 2;
 
         mRect.set(centerX - size, centerY - size, centerX + size, centerY + size);
+
+        // Rotate canvas if need
+        if (mRotationAngle != 0) {
+            canvas.save();
+            canvas.rotate(mRotationAngle, centerX, centerY);
+        }
 
         int startAngle = 0;
         for (int i = 0; i < drawingDataList.size(); i++) {
             DrawingData<Y> drawingData = drawingDataList.get(i);
             // Draw pie
             float sweepAngle = i == drawingDataList.size() - 1 ? 360 - startAngle : drawingData.sweepAngle;
+            drawingData.paint.setAlpha(mPointsAlpha);
             canvas.drawArc(mRect, startAngle, sweepAngle, true, drawingData.paint);
             // Draw text
+            drawingData.textPaint.setAlpha(mPointsAlpha);
             drawText(drawingData, canvas, drawingRect, startAngle, drawingData.sweepAngle);
             startAngle += drawingData.sweepAngle;
+        }
+
+        if (mRotationAngle != 0) {
+            canvas.restore();
         }
     }
 
     private void drawText(DrawingData<Y> drawingData, Canvas canvas, Rect drawingRect, int startAngle, float sweepAngle) {
         // TODO
+    }
+
+    public void setRotationAngle(int rotationAngle) {
+        mRotationAngle = rotationAngle;
     }
 
     static class DrawingData<Y extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<Y> {

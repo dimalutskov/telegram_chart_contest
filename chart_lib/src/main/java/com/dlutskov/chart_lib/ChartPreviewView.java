@@ -11,6 +11,7 @@ import android.view.ViewParent;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
+import com.dlutskov.chart_lib.drawers.ChartPointsDrawer;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 
 /**
@@ -167,8 +168,8 @@ public class ChartPreviewView<X extends ChartCoordinate, Y extends ChartCoordina
     }
 
     @Override
-    protected void onDataAppearanceAnimatorUpdate(float progress) {
-        super.onDataAppearanceAnimatorUpdate(progress);
+    protected void onShowDataAnimatorUpdate(ChartPointsDrawer<X, Y, ?> pointsDrawer, float progress) {
+        super.onShowDataAnimatorUpdate(pointsDrawer, progress);
 
         mSelectedMinXIndex = (int) (mSelectedMinXIndexInitial + (mSelectedMinXIndexTarget - mSelectedMinXIndexInitial) *  progress);
         mSelectedMaxXIndex = (int) (mSelectedMaxXIndexInitial + (mSelectedMaxXIndexTarget - mSelectedMaxXIndexInitial) * progress);

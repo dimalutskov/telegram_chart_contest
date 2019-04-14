@@ -65,8 +65,10 @@ public class MainActivity extends Activity {
         mHeaderLayout = createHeaderView(this);
         mIconMoon = (MoonIconView) mHeaderLayout.getChildAt(1);
         mIconMoon.setOnClickListener(v -> {
-            AppDesign.switchTheme();
-            applyCurrentColors(true);
+            if (!mProgress.isShown()) {
+                AppDesign.switchTheme();
+                applyCurrentColors(true);
+            }
         });
         mRootView.addView(mHeaderLayout);
 

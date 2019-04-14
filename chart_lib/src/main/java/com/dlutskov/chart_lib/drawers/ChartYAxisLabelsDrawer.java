@@ -43,9 +43,9 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     private ChartBounds<X, Y> mLastBounds;
 
     // Dividers paint
-    private Paint mGridPaint;
+    protected Paint mGridPaint;
     // Padding between divider and label
-    private int mGridPadding;
+    protected int mGridPadding;
 
     // Reflects whether need to draw label dividers
     private boolean mDrawGrid = true;
@@ -262,7 +262,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             float strokeWidth = mGridPaint.getStrokeWidth();
             int part = drawingRect.height() / (mLabelsCount + 1);
             for (int i = 0; i < mLabels.size(); i++) {
-                mGridPaint.setAlpha((int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
+                mGridPaint.setAlpha(Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255)));
                 float y = drawingRect.bottom - part * i;
                 y = calculateAnimatedY(y, drawingRect);
                 canvas.drawLine(drawingRect.left, y - strokeWidth, drawingRect.right, y - strokeWidth, mGridPaint);
@@ -273,7 +273,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             int part = drawingRect.height() / (mLabelsCount + 1);
             for (int i = 0; i < mLabels.size(); i++) {
                 DrawnLabel<Y> label = mLabels.get(i);
-                mLabelPaint.setAlpha((int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
+                mLabelPaint.setAlpha((Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255))));
                 float x = getLabelXCoordinate(label, drawingRect);
                 float y = drawingRect.bottom - part * i;
                 y = calculateAnimatedY(y, drawingRect);

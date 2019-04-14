@@ -19,6 +19,15 @@ import java.util.Set;
 public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends ChartCoordinate>
         extends ChartPointsDrawer<X, Y, ChartPercentagesAreasDrawer.DrawingData<Y>> {
 
+    /**
+     * Value from 0 to 1, which will display clip ratio dur to pie chart transition
+     * 0 - default state - 1 - clipped circle, same size as pie chart
+     */
+    private float mClipProgress;
+    private Path mClipPath = new Path();
+
+    private int mRotationAngle = 0;
+
     public ChartPercentagesAreasDrawer(ChartView<X, Y> chartView) {
         super(chartView);
         chartView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
@@ -96,12 +105,44 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     @Override
     public void onDraw(Canvas canvas, Rect drawingRect) {
+        float centerX = drawingRect.width() / 2;
+        float centerY = drawingRect.height() / 2 + mChartView.getPaddingTop();
+        float circleSize = drawingRect.height() / 2;
+
+        // Clip all chart to circle
+        if (mClipProgress > 0) {
+            float clipCircleSize = circleSize + centerX * (1 - mClipProgress);
+            mClipPath.reset();
+            mClipPath.addCircle(centerX, centerY, clipCircleSize, Path.Direction.CW);
+            canvas.clipPath(mClipPath);
+        }
+
+        // Rotate canvas if need
+        if (mRotationAngle != 0) {
+            canvas.save();
+            canvas.rotate(mRotationAngle, centerX, centerY);
+        }
+
+        // Draw paths
         for (int i = drawingDataList.size() - 1; i >= 0; i--) {
             DrawingData<Y> data = drawingDataList.get(i);
             if (data.isVisible()) {
+                data.paint.setAlpha(mPointsAlpha);
                 canvas.drawPath(data.path, data.paint);
             }
         }
+
+        if (mRotationAngle != 0) {
+            canvas.restore();
+        }
+    }
+
+    public void setClipValue(float clipValue) {
+        mClipProgress = clipValue;
+    }
+
+    public void setRotationAngle(int angle) {
+        mRotationAngle = angle;
     }
 
     static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {

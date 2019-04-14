@@ -101,7 +101,7 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     public void updateChartData(ChartLinesData<X, Y> chartData, boolean keepHiddenChartLines) {
-        updateChartData(chartData, 0, chartData.getXPoints().getPoints().size() - 1, false);
+        updateChartData(chartData, 0, chartData.getXPoints().getPoints().size() - 1, keepHiddenChartLines);
     }
 
     public void updateChartData(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {
@@ -109,24 +109,24 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     public void updateChartDataWithAnimation(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
-                                             boolean keepHiddenChartLines, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
+                                             ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
         if (isDataAnimatorRunning()) {
             return;
         }
         mDataUpdateAnimator = new AnimatorSet();
-        ValueAnimator hideAnim = getDataDisappearingAnimator();
-        ValueAnimator showAnim = getDataAppearingAnimator(chartData, minXIndex, maxXindex, keepHiddenChartLines, newPointsDrawer);
+        ValueAnimator hideAnim = getHideDataAnimator();
+        ValueAnimator showAnim = getShowDataAnimator(chartData, minXIndex, maxXindex, newPointsDrawer);
         mDataUpdateAnimator.playTogether(hideAnim, showAnim);
         mDataUpdateAnimator.start();
     }
 
-    protected ValueAnimator getDataDisappearingAnimator() {
+    protected ValueAnimator getHideDataAnimator() {
         // Set current points drawer as disappearing drawer
         mDisappearingPointsDrawer = getPointsDrawer();
 
         ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataDisappearAnimationDuration);
         hideAnimator.setInterpolator(new DecelerateInterpolator());
-        hideAnimator.addUpdateListener(animation -> onDataDisapearanceAnimatorUpdate((float) animation.getAnimatedValue()));
+        hideAnimator.addUpdateListener(animation -> onHideDataAnimatorUpdate(mDisappearingPointsDrawer, (float) animation.getAnimatedValue()));
         hideAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -137,38 +137,35 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         return hideAnimator;
     }
 
-    protected void onDataDisapearanceAnimatorUpdate(float progress) {
-        if (mDisappearingPointsDrawer != null) {
-            int alpha = (int) (255 * (1 - progress));
-            mDisappearingPointsDrawer.setPointsAlpha(alpha);
-        }
+    protected void onHideDataAnimatorUpdate(ChartPointsDrawer<X, Y, ?> pointsDrawer, float progress) {
+        int alpha = (int) (255 * (1 - progress));
+        pointsDrawer.setPointsAlpha(alpha);
     }
 
-    protected ValueAnimator getDataAppearingAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
-                                                     boolean keepHiddenChartLines, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
+    protected ValueAnimator getShowDataAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
         ValueAnimator showAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAppearAnimationDuration);
         showAnimator.setStartDelay(mDataAnimationAppearDelay);
         showAnimator.setInterpolator(new AccelerateInterpolator());
-        showAnimator.addUpdateListener(animation -> onDataAppearanceAnimatorUpdate((float) animation.getAnimatedValue()));
+        showAnimator.addUpdateListener(animation -> onShowDataAnimatorUpdate(newPointsDrawer, (float) animation.getAnimatedValue()));
         showAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationStart(Animator animation) {
-                onDataAppearAnimatorStarted(chartData, minXIndex, maxXindex, keepHiddenChartLines, newPointsDrawer);
+                onShowDataAnimatorStarted(chartData, minXIndex, maxXindex, newPointsDrawer);
             }
         });
         return showAnimator;
     }
 
-    protected void onDataAppearAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
-                                               boolean keepHiddenChartLines, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
+    protected void onShowDataAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
+                                             ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
         // Replace current points drawer to new one
         setPointsDrawer(newPointsDrawer);
-        updateChartData(chartData, minXIndex, maxXindex, keepHiddenChartLines);
+        updateChartData(chartData, minXIndex, maxXindex, true);
     }
 
-    protected void onDataAppearanceAnimatorUpdate(float progress) {
+    protected void onShowDataAnimatorUpdate(ChartPointsDrawer<X, Y, ?> pointsDrawer, float progress) {
         int alpha = (int) (255 * progress);
-        mPointsDrawer.setPointsAlpha(alpha);
+        pointsDrawer.setPointsAlpha(alpha);
     }
 
     protected void updateChartDataInternal(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, boolean keepHiddenChartLines) {

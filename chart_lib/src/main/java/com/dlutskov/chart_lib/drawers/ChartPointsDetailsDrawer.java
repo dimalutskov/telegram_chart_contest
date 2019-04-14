@@ -179,7 +179,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         float xPosition = xPointsPosition < drawingRect.width() / 2
                 ? xPointsPosition + mHorizontalMargin
                 : xPointsPosition - viewWidth - mHorizontalMargin;
-        float yPosition = mVerticalMargin;
+        float yPosition = mChartView.getPaddingTop() + mVerticalMargin;
 
         if (xPosition + viewWidth > drawingRect.right - mHorizontalMargin) {
             xPosition = drawingRect.right - mHorizontalMargin - viewWidth;
@@ -260,15 +260,27 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mChartView.invalidate();
     }
 
+    public int getBackgroundColor() {
+        return mBackgroundPaint.getColor();
+    }
+
     public void setBackgroundBorderColor(int color) {
         mBackgroundBorderPaint.setColor(color);
         mChartView.invalidate();
+    }
+
+    public int getBackgroundBorderColor() {
+        return mBackgroundBorderPaint.getColor();
     }
 
     public void setXLabelColor(int color) {
         mXLabelTextPaint.setColor(color);
         mLabelTextPaint.setColor(color);
         mChartView.invalidate();
+    }
+
+    public int getXLabelColor() {
+        return mXLabelTextPaint.getColor();
     }
 
 }
