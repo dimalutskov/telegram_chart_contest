@@ -58,6 +58,20 @@ public class ChartScaledLinesDrawer<X extends ChartCoordinate, Y extends ChartCo
     public void updateBounds(ChartBounds<X, Y> currentBounds, ChartBounds<X, Y> targetBounds) {
         updateBoundsInternal(targetBounds);
 
+        if (!mAnimateBoundsChanges) {
+            // Just Recalculate Y bounds for each points
+            for (ChartPointsData<Y> pointsData : getData().getYPoints()) {
+                Pair<Integer, Integer> boundsIndexes = ChartPointsData.calculateMinMaxIndexes(pointsData, targetBounds.getMinXIndex(), targetBounds.getMaxXIndex());
+                Y minY = pointsData.getPoints().get(boundsIndexes.first);
+                Y maxY = pointsData.getPoints().get(boundsIndexes.second);
+                ChartBounds<X, Y> localTargetBounds = new ChartBounds<>(targetBounds);
+                localTargetBounds.setMinY(minY);
+                localTargetBounds.setMaxY(maxY);
+                mLineBounds.put(pointsData.getId(), localTargetBounds);
+            }
+            return;
+        }
+
         // Recalculate Y bounds for each points
         for (ChartPointsData<Y> pointsData : getData().getYPoints()) {
             // Update X values for all line bounds

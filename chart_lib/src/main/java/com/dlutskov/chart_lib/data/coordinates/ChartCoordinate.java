@@ -29,6 +29,20 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
     }
 
     /**
+     * @return Subtraction of @param coordinate fro current coordinate as a new instance
+     */
+    T subtract(T coordinate);
+
+    /**
+     * @return The same as in {@link #subtract(ChartCoordinate)} but result will be written to "result" param.
+     * Override it for your coordinate to not create new instance each time calling this method
+     */
+    default T subtract(T coordinate, T result) {
+        result.set(subtract(coordinate));
+        return result;
+    }
+
+    /**
      * @return Subtraction of current coordinate from @param coordinate as a new instance
      */
     T distanceTo(T coordinate);
@@ -63,6 +77,11 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
      * Used to keep and update single object for calculations and not create new one
      */
     T set(T coordinate);
+
+    /**
+     * @return coordinate with zero value
+     */
+    T zero();
 
     /**
      * @return Name which will be displayed as the axis label

@@ -7,6 +7,8 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
@@ -79,8 +81,9 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     // Update data with animation
     private AnimatorSet mDataUpdateAnimator;
     protected ChartPointsDrawer<X, Y, ?> mDisappearingPointsDrawer;
-    protected int mDataAnimationDuration = 600;
-    protected int mDataAnimationAppearDelay = 400;
+    protected int mDataAppearAnimationDuration = 400;
+    protected int mDataDisappearAnimationDuration = 600;
+    protected int mDataAnimationAppearDelay = 100;
 
     public ChartView(Context context) {
         super(context);
@@ -121,7 +124,8 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         // Set current points drawer as disappearing drawer
         mDisappearingPointsDrawer = getPointsDrawer();
 
-        ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAnimationDuration);
+        ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataDisappearAnimationDuration);
+        hideAnimator.setInterpolator(new DecelerateInterpolator());
         hideAnimator.addUpdateListener(animation -> onDataDisapearanceAnimatorUpdate((float) animation.getAnimatedValue()));
         hideAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -142,8 +146,9 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
 
     protected ValueAnimator getDataAppearingAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
                                                      boolean keepHiddenChartLines, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
-        ValueAnimator showAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAnimationDuration);
+        ValueAnimator showAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAppearAnimationDuration);
         showAnimator.setStartDelay(mDataAnimationAppearDelay);
+        showAnimator.setInterpolator(new AccelerateInterpolator());
         showAnimator.addUpdateListener(animation -> onDataAppearanceAnimatorUpdate((float) animation.getAnimatedValue()));
         showAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -246,8 +251,9 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
     }
 
     protected void calculateCurrentBounds(ChartLinesData<X, Y> data, int minXIndex, int maxXIndex, ChartBounds<X, Y> resultBounds) {
-        if (resultBounds.getMinY() != null && resultBounds.getMaxY() != null && data.isYScaled()) {
+        if (resultBounds.getMinY() != null && resultBounds.getMaxY() != null && (data.isYScaled() || data.isPercentage())) {
             // For scaled graphs - each drawer will calculate local bounds for related graph
+            // For percentage graphs - all percentages also will be calculated by the drawer
             // No need to calculate common Y bounds
             resultBounds.setMinXIndex(minXIndex);
             resultBounds.setMaxXIndex(maxXIndex);

@@ -11,6 +11,8 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 import android.view.ViewParent;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
@@ -199,6 +201,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         isExpanded = false;
 
         mExpandCollapseAnimator = new AnimatorSet();
+        mPointsDrawer.setAnimateBoundsChanges(false);
         Animator hideAnimator = getDataDisappearingAnimator();
         Animator showAnimator = createCollapsingAppearanceAnimator(pointsDrawer, collapsedData, collapsedBounds);
         mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
@@ -221,7 +224,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         int minRequiredIndex = xIndex == 0 ? 0 : xIndex - 1;
         int maxRequiredIndex = xIndex == mLinesData.getXPoints().getPoints().size() - 1 ? xIndex : xIndex + 1;
 
-        ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAnimationDuration);
+        ValueAnimator hideAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataDisappearAnimationDuration);
+        hideAnimator.setInterpolator(new DecelerateInterpolator());
         hideAnimator.addUpdateListener(animation -> {
             float progress = (float) animation.getAnimatedValue();
 
@@ -268,7 +272,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         int minRequiredIndex = collapsedBounds.getMinXIndex();
         int maxRequiredIndex = collapsedBounds.getMaxXIndex();
 
-        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAnimationDuration);
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAppearAnimationDuration);
+        animator.setInterpolator(new AccelerateInterpolator());
         animator.addUpdateListener(animation -> {
             float progress = (float) animation.getAnimatedValue();
 

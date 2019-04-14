@@ -55,6 +55,16 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
     }
 
     @Override
+    public LongCoordinate subtract(LongCoordinate coordinate) {
+        return LongCoordinate.valueOf(mValue - coordinate.mValue);
+    }
+
+    @Override
+    public LongCoordinate subtract(LongCoordinate coordinate, LongCoordinate result) {
+        return result.setInternal(mValue - coordinate.mValue);
+    }
+
+    @Override
     public LongCoordinate distanceTo(LongCoordinate coordinate) {
         return LongCoordinate.valueOf(coordinate.mValue - mValue);
     }
@@ -77,6 +87,11 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
     @Override
     public LongCoordinate set(LongCoordinate coordinate) {
         return setInternal(coordinate.mValue);
+    }
+
+    @Override
+    public LongCoordinate zero() {
+        return valueOf(0);
     }
 
     @Override

@@ -46,7 +46,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
 
     private long mAnimDuration;
 
-    private boolean mAnimateBoundsChanges = true;
+    protected boolean mAnimateBoundsChanges = true;
 
     protected ChartPointsDrawer(ChartView chartView) {
         super(chartView);
@@ -165,6 +165,11 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         return null;
     }
 
+    protected void onVisibilityAnimatorUpdate(P pointsData, int alpha) {
+        pointsData.setAlpha(alpha);
+        mChartView.invalidate();
+    }
+
     /**
      * Handles points visibility changes
      */
@@ -184,8 +189,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         public void onAnimationUpdate(ValueAnimator animation) {
             float progress = (float) animation.getAnimatedValue();
             int alpha = (int) (mAppear ? mInitialAlpha + (255 - mInitialAlpha) * progress :  mInitialAlpha * (1 - progress));
-            mPointsData.setAlpha(alpha);
-            mChartView.invalidate();
+            onVisibilityAnimatorUpdate(mPointsData, alpha);
         }
     }
 
@@ -194,6 +198,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
      * Holds all required drawing options for bound points data
      */
     protected static class DrawingData<C extends ChartCoordinate> {
+
+        protected ChartPointsData<C> pointsData;
 
         private final String mId;
 
@@ -204,6 +210,7 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         protected Paint paint;
 
         DrawingData(ChartPointsData<C> pointsData) {
+            this.pointsData = pointsData;
             mId = pointsData.getId();
 
             paint = new Paint();

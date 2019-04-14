@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.view.View;
 
 import com.dlutskov.chart_lib.ChartBounds;
 import com.dlutskov.chart_lib.ChartView;
@@ -12,16 +13,28 @@ import com.dlutskov.chart_lib.data.ChartPointsData;
 import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 
+import java.util.List;
+import java.util.Set;
+
 public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends ChartCoordinate>
         extends ChartPointsDrawer<X, Y, ChartPercentagesAreasDrawer.DrawingData<Y>> {
 
-    // Buffer values which used for data calculations - to not create new instance on each rebuild
-    private ChartBounds<X, Y> mLocalBounds;
-    private Y mLocalMaxValue;
-    private Y mLocalYValue;
-
     public ChartPercentagesAreasDrawer(ChartView<X, Y> chartView) {
         super(chartView);
+        chartView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+    }
+
+    @Override
+    public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
+        super.updateData(data, bounds, hiddenChartPoints);
+        this.drawingDataList.clear();
+        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
+            DrawingData<Y> drawingData = new DrawingData<>(pointsData);
+            boolean isVisible = !hiddenChartPoints.contains(pointsData.getId());
+            drawingData.setVisible(isVisible);
+            drawingData.setAlpha(isVisible ? 255 : 0);
+            this.drawingDataList.add(drawingData);
+        }
     }
 
     @Override
@@ -32,128 +45,53 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     @Override
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
-        // Update local bounds reference
-        if (mLocalBounds == null) {
-            mLocalBounds = new ChartBounds<>(bounds);
-        } else {
-            mLocalBounds.update(bounds);
-        }
+        Y zero = (Y) bounds.getMinY().zero();
+        Y maxValue = (Y) zero.clone();
+        Y buf = (Y) maxValue.clone();
+        ChartBounds<X, Y> localBounds = new ChartBounds<>(bounds);
+        for (int i = bounds.getMinXIndex(); i <= bounds.getMaxXIndex(); i++) {
 
-        int lineIndex = 0;
-        for (int i = bounds.getMinXIndex(); i <= bounds.getMaxXIndex(); i++) { // TODO <=
-//            boolean maxValueInited = false;
-//            for (ChartPointsData<Y> pointsData : data.getYPoints()) {
-//                // Create drawing data if it's not exists
-//                DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-//                if (drawingData == null) {
-//                    drawingData = new DrawingData<>(pointsData, ChartUtils.getPixelForDp(mChartView.getContext(), 1));
-//                    this.drawingDataList.add(drawingData);
-//                }
-//
-//                if (!drawingData.isVisible()) continue;
-//
-//                // Calculate Y value according to visibility
-//                Y yPoint = pointsData.getPoints().get(i);
-//                if (mLocalYValue == null) {
-//                    mLocalYValue = (Y) yPoint.clone();
-//                } else {
-//                    mLocalYValue.set(yPoint);
-//                }
-//                yPoint.getPart(drawingData.getAlpha() / (float)255, mLocalYValue);
-//
-//                // Add y value to sum
-//                if (!maxValueInited) {
-//                    // Set first value to local max value object
-//                    maxValueInited = true;
-//                    if (mLocalMaxValue == null) {
-//                        mLocalMaxValue = (Y) mLocalYValue.clone();
-//                    } else {
-//                        mLocalMaxValue.set(mLocalYValue);
-//                    }
-//                } else {
-//                    // Add new value to previous value
-//                    mLocalMaxValue.add(mLocalYValue, mLocalMaxValue);
-//                }
-//            }
-//
-//            mLocalBounds.setMaxY(mLocalMaxValue);
-
-//            drawStackedBars(data, mLocalBounds, drawingRect, lineIndex, i);
-            buildAreaPathes(data, bounds, drawingRect, i);
-            lineIndex += 4;
-        }
-    }
-
-    private void drawStackedBars(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect,
-                                 int lineIndex, int pointIndex) {
-        int lineWidth = ChartUtils.getPixelForDp(mChartView.getContext(), 1);
-
-        float prevY = drawingRect.bottom;
-        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
-            DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-            if (drawingData == null) {
-                drawingData = new DrawingData<>(pointsData, ChartUtils.getPixelForDp(mChartView.getContext(), 1));
-                this.drawingDataList.add(drawingData);
+            // Calculate local bounds
+            maxValue.set(zero);
+            for (DrawingData<Y> drawingData : drawingDataList) {
+                if (!drawingData.isVisible()) continue;
+                drawingData.pointsData.getPoints().get(i).getPart(drawingData.getAlpha() / 255f, buf);
+                maxValue.add(buf, maxValue);
             }
-            if (!drawingData.isVisible()) continue;
+            localBounds.setMaxY(maxValue);
 
-            drawingData.paint.setStrokeWidth(lineWidth); // TODO
-            drawingData.paint.setAlpha(mPointsAlpha);
+            float prevY = drawingRect.bottom;
+            for (DrawingData<Y> drawingData : drawingDataList) {
+                if (!drawingData.isVisible()) continue;
 
-            float x = ChartUtils.calcXCoordinate(bounds, drawingRect, pointIndex);
-            float y = ChartUtils.calcYCoordinate(bounds, drawingRect, pointsData.getPoints().get(pointIndex));
-            float appearingRatio = drawingData.getAlpha() / (float) 255; // Reduce bar height with reducing bar visibility
-            float newY = prevY - (drawingRect.bottom - y) * appearingRatio;
-            drawingData.mLines[lineIndex] = x;// + columnWidth / 2;
-            drawingData.mLines[lineIndex + 1] = prevY;
-            drawingData.mLines[lineIndex + 2] = x;// + columnWidth / 2;
-            drawingData.mLines[lineIndex + 3] = newY;
+                List<Y> points = drawingData.pointsData.getPoints();
 
-            prevY = newY;
-        }
-    }
-
-//    @Override
-//    public void onDraw(Canvas canvas, Rect drawingRect) {
-//        int linesCount = (getBounds().getMaxXIndex() - getBounds().getMinXIndex()) * 4;
-//        for (DrawingData<Y> drawingData : drawingDataList) {
-//            if (drawingData.isVisible()) {
-//                canvas.drawLines(drawingData.mLines, 0, linesCount, drawingData.getPaint());
-//            }
-//        }
-//    }
-
-    private void buildAreaPathes(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect, int pointIndex) {
-        float prevY = drawingRect.bottom;
-        for (ChartPointsData<Y> pointsData : data.getYPoints()) {
-            DrawingData<Y> drawingData = findDrawingData(pointsData.getId());
-            if (drawingData == null) {
-                drawingData = new DrawingData<>(pointsData, ChartUtils.getPixelForDp(mChartView.getContext(), 1));
-                this.drawingDataList.add(drawingData);
-            }
-            if (!drawingData.isVisible()) continue;
-
-            if (pointIndex == bounds.getMinXIndex()) {
                 // First point
-                drawingData.mPath.reset();
-                drawingData.mPath.moveTo(drawingRect.left, drawingRect.bottom);
-            }
+                if (i == bounds.getMinXIndex()) {
+                    drawingData.path.reset();
+                    drawingData.path.moveTo(drawingRect.left, drawingRect.bottom);
+                }
 
-            float x = ChartUtils.calcXCoordinate(bounds, drawingRect, pointIndex);
-            float y = ChartUtils.calcYCoordinate(bounds, drawingRect, pointsData.getPoints().get(pointIndex));
-            float appearingRatio = drawingData.getAlpha() / (float) 255; // Reduce bar height with reducing bar visibility
-            float newY = prevY - (drawingRect.bottom - y) * appearingRatio;
+                float x = ChartUtils.calcXCoordinate(localBounds, drawingRect, i);
+                float y = ChartUtils.calcYCoordinate(localBounds, drawingRect, points.get(i));
+                float appearingRatio = drawingData.getAlpha() / 255f; // Reduce bar height with reducing bar visibility
+                float yCoordinate = prevY - (drawingRect.bottom - y) * appearingRatio;
+                drawingData.path.lineTo(x, yCoordinate);
+                prevY = yCoordinate;
 
-            drawingData.mPath.lineTo(x, newY);
-
-            if (pointIndex == bounds.getMaxXIndex()) {
                 // Last point - connect to the first point
-                drawingData.mPath.lineTo(drawingRect.right, drawingRect.bottom);
-                drawingData.mPath.lineTo(drawingRect.left, drawingRect.bottom);
+                if (i == bounds.getMaxXIndex()) {
+                    drawingData.path.lineTo(drawingRect.right, drawingRect.bottom);
+                    drawingData.path.lineTo(drawingRect.left, drawingRect.bottom);
+                }
             }
-
-            prevY = newY;
         }
+    }
+
+    @Override
+    protected void onVisibilityAnimatorUpdate(DrawingData<Y> pointsData, int alpha) {
+        super.onVisibilityAnimatorUpdate(pointsData, alpha);
+        invalidate();
     }
 
     @Override
@@ -161,26 +99,24 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
         for (int i = drawingDataList.size() - 1; i >= 0; i--) {
             DrawingData<Y> data = drawingDataList.get(i);
             if (data.isVisible()) {
-                canvas.drawPath(data.mPath, data.paint);
+                canvas.drawPath(data.path, data.paint);
             }
         }
     }
 
     static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {
 
-        protected float[] mLines;
-        Path mPath;
+        Path path;
 
-        DrawingData(ChartPointsData<C> pointsData, int strokeWidth) {
+        DrawingData(ChartPointsData<C> pointsData) {
             super(pointsData);
 
             paint.setStyle(Paint.Style.FILL);
-//            paint.setStrokeWidth(strokeWidth);
 
-            mPath = new Path();
-
-            mLines = new float[pointsData.getPoints().size() * 4];
+            path = new Path();
         }
 
     }
+
 }
+
