@@ -30,6 +30,11 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     private final Paint mSelectedPointsDividerPaint;
 
+    private Y mZero;
+    private Y mYMaxValue;
+    private Y mYBuf;
+    private Y mMinYValue;
+
     public ChartPercentagesAreasDrawer(ChartView<X, Y> chartView) {
         super(chartView);
         chartView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
@@ -63,20 +68,32 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     @Override
     protected void rebuild(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect) {
-        Y zero = (Y) bounds.getMinY().zero();
-        Y maxValue = (Y) zero.clone();
-        Y buf = (Y) maxValue.clone();
+        if (mZero == null) {
+            mZero = (Y) bounds.getMinY().zero();
+            mYMaxValue = (Y) mZero.clone();
+            mYBuf = (Y) mYMaxValue.clone();
+        }
+
         ChartBounds<X, Y> localBounds = new ChartBounds<>(bounds);
         for (int i = bounds.getMinXIndex(); i <= bounds.getMaxXIndex(); i++) {
 
             // Calculate local bounds
-            maxValue.set(zero);
+            mYMaxValue.set(mZero);
             for (DrawingData<Y> drawingData : drawingDataList) {
                 if (!drawingData.isVisible()) continue;
-                drawingData.pointsData.getPoints().get(i).getPart(drawingData.getAlpha() / 255f, buf);
-                maxValue.add(buf, maxValue);
+                Y value = drawingData.pointsData.getPoints().get(i);
+                if (mMinYValue == null) {
+                    mMinYValue = (Y) value.clone();
+                } else if (value.compareTo(mMinYValue) < 0) {
+                    mMinYValue.set(value);
+                }
+                value.getPart(drawingData.getAlpha() / 255f, mYBuf);
+                mYMaxValue.add(mYBuf, mYMaxValue);
             }
-            localBounds.setMaxY(maxValue);
+            if (mMinYValue != null && mYMaxValue.compareTo(mMinYValue) < 0) {
+                mYMaxValue.set(mMinYValue);
+            }
+            localBounds.setMaxY(mYMaxValue);
 
             float prevY = drawingRect.bottom;
             for (DrawingData<Y> drawingData : drawingDataList) {

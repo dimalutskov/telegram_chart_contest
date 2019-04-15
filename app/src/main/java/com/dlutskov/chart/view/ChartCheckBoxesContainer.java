@@ -2,7 +2,6 @@ package com.dlutskov.chart.view;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -37,12 +36,15 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
 
     private int mMargin = ChartUtils.getPixelForDp(getContext(), 4);
 
+    int mCheckedCheckboxesCount;
+
     public ChartCheckBoxesContainer(Context context) {
         super(context);
         setOrientation(VERTICAL);
     }
 
     public void createCheckBoxes(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
+        mCheckedCheckboxesCount = 0;
         if (getWidth() == 0) {
             post(() -> createCheckBoxes(chartData));
             return;
@@ -63,6 +65,7 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
             toggleView.setCheckedTextColor(mCheckBoxTextColor);
             toggleView.setTag(lineData);
             toggleView.setChecked(true);
+            mCheckedCheckboxesCount++;
             toggleView.setOnClickListener(this);
             toggleView.setOnLongClickListener(this);
 
@@ -94,7 +97,19 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
     @Override
     public void onClick(View v) {
         ChartCheckBox checkBox = (ChartCheckBox) v;
+
+        if (checkBox.isChecked() && mCheckedCheckboxesCount == 1) {
+            return;
+        }
+
         checkBox.toggle();
+
+        if (checkBox.isChecked()) {
+            mCheckedCheckboxesCount++;
+        } else {
+            mCheckedCheckboxesCount--;
+        }
+
         if (mListener != null) {
             ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
             mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checkBox.isChecked());
@@ -112,7 +127,14 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
                     ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
                     mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checked);
                 }
-                checkBox.setChecked(checked);
+                if (checkBox.isChecked() != checked) {
+                    checkBox.setChecked(checked);
+                    if (checkBox.isChecked()) {
+                        mCheckedCheckboxesCount++;
+                    } else {
+                        mCheckedCheckboxesCount--;
+                    }
+                }
             }
         }
         return true;

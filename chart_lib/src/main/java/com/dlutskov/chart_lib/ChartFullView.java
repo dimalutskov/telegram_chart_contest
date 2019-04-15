@@ -236,6 +236,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         mExpandCollapseAnimator = new AnimatorSet();
         mPointsDrawer.setAnimateBoundsChanges(false);
+        mPointsDetailsDrawer.setExpanded(false);
 
         Animator hideAnimator = collapsedData.isPercentage()
                 ? getCollapseHidePercentageAnimator()

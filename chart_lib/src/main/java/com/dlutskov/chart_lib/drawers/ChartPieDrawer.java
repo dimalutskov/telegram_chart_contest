@@ -56,14 +56,17 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
             sumMap.put(pointsData.getId(), sum);
         }
         int percents = 0;
+        int angles = 0;
         for (int i = drawingDataList.size() - 1; i >= 0; i--) {
             DrawingData<Y> drawingData = drawingDataList.get(i);
             Y sum = sumMap.get(drawingData.getId());
             float ratio = sum.calcCoordinateRatio(zero, totalSum);
-            drawingData.sweepAngle = Math.round(ratio * 360);
+            float angle = i == 0 ? 360 - angles : Math.round(ratio * 360);
+            drawingData.sweepAngle = angle;
             int p = i == 0 ? 100 - percents : Math.round(ratio * 100);
             drawingData.text = p + "%";
             percents += p;
+            angles += angle;
         }
     }
 
@@ -86,7 +89,7 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
             DrawingData<Y> drawingData = drawingDataList.get(i);
 
             // Draw pie
-            float sweepAngle = i == drawingDataList.size() - 1 ? 360 - startAngle : drawingData.sweepAngle;
+            float sweepAngle = drawingData.sweepAngle;
             drawingData.paint.setAlpha(mPointsAlpha);
             canvas.drawArc(mRect, startAngle, sweepAngle, true, drawingData.paint);
 
@@ -105,24 +108,24 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
         }
     }
 
+    @Override
+    protected void onVisibilityAnimatorUpdate(DrawingData<Y> pointsData, int alpha) {
+        super.onVisibilityAnimatorUpdate(pointsData, alpha);
+        invalidate();
+    }
+
     private int getTextSize(float sweepAngle) {
         int textSize;
-        if (sweepAngle < 45) {
+        if (sweepAngle < 120) {
             textSize = 14;
-        } else if (sweepAngle < 90) {
-            textSize = 16;
-        } else if (sweepAngle < 180) {
-            textSize = 18;
         } else {
-            textSize = 20;
+            textSize = 18;
         }
         return ChartUtils.getPixelForDp(mChartView.getContext(), textSize);
     }
 
     private float getTextShiftRatio(float sweepAngle) {
-        if (sweepAngle > 180) {
-            return 0.55f;
-        } else if (sweepAngle > 90) {
+        if (sweepAngle > 90) {
             return 0.65f;
         } else {
             return 0.75f;

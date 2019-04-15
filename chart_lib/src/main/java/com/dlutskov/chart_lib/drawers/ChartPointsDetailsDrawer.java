@@ -82,7 +82,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
     private boolean isShown;
 
-    private final boolean isExpandedPoints;
+    private boolean isExpandedPoints;
 
     public ChartPointsDetailsDrawer(ChartView<X, Y> chartView, boolean isExpandedPoints) {
         super(chartView);
@@ -236,7 +236,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         if (mData.isPercentage()) {
             mPercentsTextPaint.setAlpha(mCurrentAlpha);
-            labelXPosition += mLabelTextPaint.measureText("100% ");
+            labelXPosition += mLabelTextPaint.measureText("100%  ");
             // Calculate local bounds
             mYSum.set(mZero);
             for (int i = 0; i < mData.getYPoints().size(); i++) {
@@ -321,6 +321,10 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mChartView.invalidate();
     }
 
+    public void setExpanded(boolean expanded) {
+        isExpandedPoints = expanded;
+    }
+
     public void setBackgroundColor(int color) {
         mBackgroundPaint.setColor(color);
         mChartView.invalidate();
@@ -342,6 +346,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     public void setXLabelColor(int color) {
         mXLabelTextPaint.setColor(color);
         mLabelTextPaint.setColor(color);
+        mPercentsTextPaint.setColor(color);
         mChartView.invalidate();
     }
 
