@@ -163,20 +163,15 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     private List<DrawnLabel<Y>> buildLabels(ChartBounds<X, Y> bounds, Rect drawingRect) {
-        // TODO proper values!!!
         List<DrawnLabel<Y>> labels = new ArrayList<>();
-        // As label has own size - last label need to be drawn not at the top point
-        float heightToLastLabel = (drawingRect.height()  - mTextSize - mGridPadding);
-        Y maxLabelValue = (Y) bounds.getMinY().add(bounds.getMinY().distanceTo(bounds.getMaxY())
-                .getPart(heightToLastLabel / drawingRect.height()));
-        Y step = (Y) bounds.getMinY().distanceTo(maxLabelValue).getPart(1.f / mLabelsCount);
-        Y currentValue = bounds.getMinY();
-        for (int i = 0; i <= mLabelsCount; i++) {
-            String label = currentValue.getAxisName();
-            DrawnLabel<Y> drawnLabel = new DrawnLabel(currentValue, label);
-            labels.add(drawnLabel);
-            currentValue = (Y) currentValue.add(step);
+
+        int part = drawingRect.height() / (mLabelsCount + 1);
+        for (int i = 0; i < mLabelsCount; i++) {
+            float y = part * i;
+            Y value = (Y) bounds.getMinY().add(bounds.getMinY().distanceTo(bounds.getMaxY()).getPart(y / drawingRect.height()));
+            labels.add(new DrawnLabel<>(value, value.getAxisName()));
         }
+
         return labels;
     }
 
