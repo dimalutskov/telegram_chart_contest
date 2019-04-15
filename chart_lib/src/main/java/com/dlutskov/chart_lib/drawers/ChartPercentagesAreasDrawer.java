@@ -34,6 +34,8 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
         super(chartView);
         chartView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
+        setAnimDuration(300);
+
         mSelectedPointsDividerPaint = new Paint();
         mSelectedPointsDividerPaint.setAntiAlias(true);
         mSelectedPointsDividerPaint.setStyle(Paint.Style.STROKE);

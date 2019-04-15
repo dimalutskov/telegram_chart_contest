@@ -41,6 +41,7 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
 
     @Override
     public float calcCoordinateRatio(LongCoordinate min, LongCoordinate max) {
+        if (max.mValue.equals(min.mValue)) return 0;
         return (float)(mValue - min.mValue) / (max.mValue - min.mValue);
     }
 

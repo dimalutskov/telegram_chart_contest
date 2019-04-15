@@ -358,7 +358,7 @@ public class ChartController implements
                         });
                     }
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
-                    mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, createPointsDrawer(finalData, mChartPreview));
+                    mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, createPointsDrawer(finalData, mChartPreview), true);
                 }
             });
         }).start();
@@ -410,10 +410,7 @@ public class ChartController implements
             mHeaderView.setTitleText(mChartData.name);
             mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
-            boolean keepHiddenCharts = true;
-            if (!mChartView.hasVisiblePoints()) {
-                mChartView.showAllPoints();
-            }
+            boolean keepHiddenChartLines = mChartView.hasVisiblePoints();
             if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
                 mChartPreview.setVisibility(View.VISIBLE);
                 mCheckBoxesContainer.setVisibility(View.INVISIBLE);
@@ -421,12 +418,11 @@ public class ChartController implements
                 ViewGroup.LayoutParams params = parent.getLayoutParams();
                 params.height = ChartUtils.getPixelForDp(mActivity, 40 + PADDING_GENERAL * 2);
                 parent.setLayoutParams(params);
-                keepHiddenCharts = false;
-                mChartView.showAllPoints();
+                keepHiddenChartLines = false;
             }
 
-            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds, keepHiddenCharts);
-            mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
+            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds, keepHiddenChartLines);
+            mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, createPointsDrawer(mCurrentChartLinesData, mChartPreview), keepHiddenChartLines);
         }
     }
 

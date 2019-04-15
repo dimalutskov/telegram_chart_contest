@@ -107,18 +107,8 @@ public interface ChartCoordinate<T extends ChartCoordinate> extends Comparable<T
     T clone();
 
 }
-// TODO Issues:
-
-// Progress bar style
-// Initial progress bar
 // X Labels
 
-// Small performance
-// LINES on animation
 
-// Hide preview and show checkboxes
-// Zoom out 0 points
-
-// IMPROVEMENTS
-// PIE percents
 // Empty PIE
+// Last disappearance

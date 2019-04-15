@@ -56,12 +56,12 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
             sumMap.put(pointsData.getId(), sum);
         }
         int percents = 0;
-        for (int i = 0; i < drawingDataList.size(); i++) {
+        for (int i = drawingDataList.size() - 1; i >= 0; i--) {
             DrawingData<Y> drawingData = drawingDataList.get(i);
             Y sum = sumMap.get(drawingData.getId());
             float ratio = sum.calcCoordinateRatio(zero, totalSum);
             drawingData.sweepAngle = Math.round(ratio * 360);
-            int p = i == drawingDataList.size() - 1 ? 100 - percents : Math.round(ratio * 100);
+            int p = i == 0 ? 100 - percents : Math.round(ratio * 100);
             drawingData.text = p + "%";
             percents += p;
         }
@@ -71,9 +71,9 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
     protected void onDraw(Canvas canvas, Rect drawingRect) {
         float centerX = drawingRect.width() / 2;
         float centerY = drawingRect.height() / 2 + mChartView.getPaddingTop();
-        float size = drawingRect.height() / 2;
+        float radius = drawingRect.height() / 2;
 
-        mRect.set(centerX - size, centerY - size, centerX + size, centerY + size);
+        mRect.set(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
 
         // Rotate canvas if need
         if (mRotationAngle != 0) {
@@ -84,13 +84,19 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
         int startAngle = 0;
         for (int i = 0; i < drawingDataList.size(); i++) {
             DrawingData<Y> drawingData = drawingDataList.get(i);
+
             // Draw pie
             float sweepAngle = i == drawingDataList.size() - 1 ? 360 - startAngle : drawingData.sweepAngle;
             drawingData.paint.setAlpha(mPointsAlpha);
             canvas.drawArc(mRect, startAngle, sweepAngle, true, drawingData.paint);
+
             // Draw text
-            drawingData.textPaint.setAlpha(mPointsAlpha);
-            drawText(drawingData, canvas, drawingRect, startAngle, drawingData.sweepAngle);
+            float textRadius = radius * getTextShiftRatio(sweepAngle);
+            drawingData.textPaint.setAlpha(Math.min(mPointsAlpha, drawingData.getAlpha()));
+            drawingData.textPaint.setTextSize(getTextSize(sweepAngle));
+            float medianAngle = (startAngle + (drawingData.sweepAngle / 2f)) * (float)Math.PI / 180f; // this angle will place the text in the center of the arc.
+            canvas.drawText(drawingData.text, (float)(centerX + (textRadius * Math.cos(medianAngle))), (float)(centerY + (textRadius * Math.sin(medianAngle))), drawingData.textPaint);
+
             startAngle += drawingData.sweepAngle;
         }
 
@@ -99,8 +105,28 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
         }
     }
 
-    private void drawText(DrawingData<Y> drawingData, Canvas canvas, Rect drawingRect, int startAngle, float sweepAngle) {
-        // TODO
+    private int getTextSize(float sweepAngle) {
+        int textSize;
+        if (sweepAngle < 45) {
+            textSize = 14;
+        } else if (sweepAngle < 90) {
+            textSize = 16;
+        } else if (sweepAngle < 180) {
+            textSize = 18;
+        } else {
+            textSize = 20;
+        }
+        return ChartUtils.getPixelForDp(mChartView.getContext(), textSize);
+    }
+
+    private float getTextShiftRatio(float sweepAngle) {
+        if (sweepAngle > 180) {
+            return 0.55f;
+        } else if (sweepAngle > 90) {
+            return 0.65f;
+        } else {
+            return 0.75f;
+        }
     }
 
     public void setRotationAngle(int rotationAngle) {
@@ -131,7 +157,8 @@ public class ChartPieDrawer<X extends ChartCoordinate, Y extends ChartCoordinate
             paint.setStyle(Paint.Style.FILL);
 
             textPaint = new Paint();
-            textPaint.setAntiAlias(true);
+            textPaint.setTextSize(42); // TODO
+            textPaint.setTextAlign(Paint.Align.CENTER);
             textPaint.setColor(Color.WHITE);
         }
 

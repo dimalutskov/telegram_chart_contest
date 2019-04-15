@@ -247,14 +247,14 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
             int percentsSum = 0;
             int lastPercents = 0;
             int lastPercentsPosition = 0;
-            for (int i = 0; i < mData.getYPoints().size(); i++) {
+            for (int i = mData.getYPoints().size() -1; i >= 0; i--) {
                 ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
                 if (mHiddenChartLines.contains(pointsData.getId())) continue;
                 lastPercents = Math.round(pointsData.getPoints().get(mSelectedPointPosition).calcCoordinateRatio(mZero, mYSum) * 100);
                 percentsSum += lastPercents;
 
                 String string =  lastPercents + "%";
-                if (lastPercents < 0.1f) {
+                if (lastPercents < 10) {
                     string = "  " + string;
                 }
 
@@ -264,7 +264,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
             if (percentsSum != 100) {
                 lastPercents = lastPercents +  (100 - percentsSum);
                 String string =  lastPercents + "%";
-                if (lastPercents < 0.1f) {
+                if (lastPercents < 10) {
                     string = "  " + string;
                 }
                 mPercentagesStrings[lastPercentsPosition] = string;

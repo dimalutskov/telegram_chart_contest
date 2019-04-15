@@ -137,6 +137,11 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             return super.onTouchEvent(ev);
         }
 
+        if (mPointsDrawer instanceof ChartPieDrawer) {
+            // Not implemented
+            return super.onTouchEvent(ev);
+        }
+
         return mGestureHandler.onTouchEvent(ev);
     }
 
@@ -214,8 +219,10 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                 : getExpandHideAnimator(selectedXIndex);
 
         Animator showAnimator = mLinesData.isPercentage()
-                ? getExpandShowPercentageAnimator(expandedData, newMinXIndex, newMaxXIndex, (ChartPieDrawer<X, Y>) pointsDrawer)
-                : getShowDataAnimator(expandedData, newMinXIndex, newMaxXIndex, pointsDrawer);
+                ? getExpandShowPercentageAnimator(expandedData, newMinXIndex, newMaxXIndex, (ChartPieDrawer<X, Y>) pointsDrawer, true)
+                : getShowDataAnimator(expandedData, newMinXIndex, newMaxXIndex, pointsDrawer, true);
+
+        mXAxisLabelsDrawer.setExpandedPoints(true);
 
         mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
         mExpandCollapseAnimator.start();
@@ -235,11 +242,12 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                 : getHideDataAnimator();
 
         Animator showAnimator = collapsedData.isPercentage()
-                ? getCollapseShowPercentageAnimator(collapsedData, collapsedBounds, (ChartPercentagesAreasDrawer<X, Y>) pointsDrawer)
+                ? getCollapseShowPercentageAnimator(collapsedData, collapsedBounds, (ChartPercentagesAreasDrawer<X, Y>) pointsDrawer, keepHiddenCharts)
                 : getCollapseShowAnimator(pointsDrawer, collapsedData, collapsedBounds, keepHiddenCharts);
 
-        mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
+        mXAxisLabelsDrawer.setExpandedPoints(false);
 
+        mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
         mExpandCollapseAnimator.start();
     }
 
@@ -347,7 +355,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     @Override
-    protected void onShowDataAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex, ChartPointsDrawer<X, Y, ?> newPointsDrawer) {
+    protected void onShowDataAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
+                                             ChartPointsDrawer<X, Y, ?> newPointsDrawer, boolean keepHiddenChartLines) {
         // Set new point details drawer
         ChartPointsDetailsDrawer detailsDrawer = new ChartPointsDetailsDrawer<>(ChartFullView.this, true);
         detailsDrawer.setBackgroundColor(mPointsDetailsDrawer.getBackgroundColor());
@@ -355,15 +364,11 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         detailsDrawer.setXLabelColor(mPointsDetailsDrawer.getXLabelColor());
         setPointsDetailsDrawer(detailsDrawer);
 
-        super.onShowDataAnimatorStarted(chartData, minXIndex, maxXindex, newPointsDrawer);
+        super.onShowDataAnimatorStarted(chartData, minXIndex, maxXindex, newPointsDrawer, keepHiddenChartLines);
 
         // Reset selected points index
         mPointsDetailsXIndex = -1;
         mPointsDetailsAlpha = 0;
-
-        if (!mLinesData.isPercentage()) {
-            mXAxisLabelsDrawer.setExpandedPoints(true);
-        }
     }
 
     ////////////////////// PERCENTAGES CHART ANIMATORS /////////////////
@@ -411,7 +416,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         return result;
     }
 
-    private Animator getExpandShowPercentageAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXIndex, ChartPieDrawer<X, Y> newPointsDrawer) {
+    private Animator getExpandShowPercentageAnimator(ChartLinesData<X, Y> chartData, int minXIndex, int maxXIndex,
+                                                     ChartPieDrawer<X, Y> newPointsDrawer, boolean keepHiddenChartLines) {
         AnimatorSet result = new AnimatorSet();
         result.setStartDelay(PIE_CHART_APPEAR_DELAY);
 
@@ -420,12 +426,10 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         showAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationStart(Animator animation) {
-                System.out.println("@@@ START");
-                onShowDataAnimatorStarted(chartData, minXIndex, maxXIndex, newPointsDrawer);
+                onShowDataAnimatorStarted(chartData, minXIndex, maxXIndex, newPointsDrawer, keepHiddenChartLines);
             }
         });
         showAnimator.addUpdateListener(animation -> {
-            System.out.println("@@@ UPDATE");
             float progress = (float) animation.getAnimatedValue();
             newPointsDrawer.setPointsAlpha((int) (255 * progress));
             newPointsDrawer.setRotationAngle((int) ((360 + PIE_CHART_OVERSHOT_ANGLE) * progress));
@@ -467,7 +471,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     private Animator getCollapseShowPercentageAnimator(ChartLinesData<X, Y> chartData, ChartBounds<X, Y> bounds,
-                                                       ChartPercentagesAreasDrawer<X, Y> newPointsDrawer) {
+                                                       ChartPercentagesAreasDrawer<X, Y> newPointsDrawer, boolean keepHiddenChartLines) {
         AnimatorSet result = new AnimatorSet();
         result.setStartDelay(PIE_CHART_APPEAR_DELAY);
 
@@ -486,7 +490,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             @Override
             public void onAnimationStart(Animator animation) {
                 super.onAnimationStart(animation);
-                onShowDataAnimatorStarted(chartData, bounds.getMinXIndex(), bounds.getMaxXIndex(), newPointsDrawer);
+                onShowDataAnimatorStarted(chartData, bounds.getMinXIndex(), bounds.getMaxXIndex(), newPointsDrawer, keepHiddenChartLines);
                 newPointsDrawer.setClipValue(1f);
             }
         });
