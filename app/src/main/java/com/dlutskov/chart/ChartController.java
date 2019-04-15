@@ -98,9 +98,7 @@ public class ChartController implements
 
             // Checkboxes
             params = new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
-            params.topMargin = ChartUtils.getPixelForDp(mActivity, 22);
-            params.leftMargin = margin;
-            params.rightMargin = margin;
+            params.setMargins(margin, margin, margin, margin);
             mCheckBoxesContainer.setLayoutParams(params);
             mCheckBoxesContainer.setVisibility(View.INVISIBLE);
 
@@ -350,8 +348,8 @@ public class ChartController implements
 
                     if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
                         mChartPreview.setVisibility(View.INVISIBLE);
-                        mCheckBoxesContainer.createCheckBoxes(finalData);
                         mCheckBoxesContainer.setVisibility(View.VISIBLE);
+                        mCheckBoxesContainer.createCheckBoxes(finalData);
                     }
 
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);

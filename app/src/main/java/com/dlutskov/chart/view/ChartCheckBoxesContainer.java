@@ -5,7 +5,7 @@ import android.graphics.Color;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.data.ChartLinesData;
@@ -17,7 +17,7 @@ import com.dlutskov.chart_lib.data.coordinates.LongCoordinate;
 /**
  * Contains ChartCheckBox views related to collection of ChartPointsData
  */
-public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClickListener, View.OnLongClickListener {
+public class ChartCheckBoxesContainer extends LinearLayout implements View.OnClickListener, View.OnLongClickListener {
 
     /**
      * Used to notify about ChartPointsData's related checkbox state changed
@@ -39,67 +39,25 @@ public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClic
 
     public ChartCheckBoxesContainer(Context context) {
         super(context);
-    }
-
-    @Override
-    protected void onMeasure(int widthSpec, int heightSpec) {
-        super.onMeasure(widthSpec, heightSpec);
-
-        int parentWidth = getMeasuredWidth();
-
-        int height = 0;
-        int width = 0;
-        for (int i = 0; i < getChildCount(); i++) {
-            View child = getChildAt(i);
-            if (height == 0) {
-                height = child.getMeasuredHeight();
-            }
-            width += child.getMeasuredWidth() + mMargin;
-            if (width > parentWidth) {
-                // Move to new row
-                width = child.getMeasuredWidth() + mMargin;
-                height += child.getMeasuredHeight() + mMargin;
-            }
-        }
-
-        setMeasuredDimension(getMeasuredWidth(), height);
-    }
-
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        int parentWidth = getMeasuredWidth();
-
-        int height = 0;
-        int width = 0;
-        for (int i = 0; i < getChildCount(); i++) {
-            View child = getChildAt(i);
-
-            int childWidth = child.getMeasuredWidth();
-            int childHeight = child.getMeasuredHeight();
-
-            if (width + childWidth > parentWidth) {
-                // Move to new row
-                width = 0;
-                height += child.getMeasuredHeight() + mMargin;
-            }
-            int l = width == 0 ? 0 : width + mMargin;
-            int r = l + childWidth;
-            child.layout(l, height, l + childWidth, height + childHeight);
-            width = r;
-        }
-
+        setOrientation(VERTICAL);
     }
 
     public void createCheckBoxes(ChartLinesData<DateCoordinate, LongCoordinate> chartData) {
+        if (getWidth() == 0) {
+            post(() -> createCheckBoxes(chartData));
+            return;
+        }
+
         // Clear previous views (consider caching)
         removeAllViews();
 
+        float measuredWidth = 0;
+
         int height = ChartUtils.getPixelForDp(getContext(), 30);
+        LinearLayout container = createHorizontalContainer(height);
         for (int i = 0; i < chartData.getYPoints().size(); i++) {
             ChartPointsData<LongCoordinate> lineData = chartData.getYPoints().get(i);
-            ChartCheckBox toggleView = createToggleView(getContext());
-            LayoutParams params = (LayoutParams) toggleView.getLayoutParams();
-            params.height = height;
+            ChartCheckBox toggleView = createToggleView(getContext(), height, mMargin);
             toggleView.setText(lineData.getName());
             toggleView.setColor(lineData.getColor());
             toggleView.setCheckedTextColor(mCheckBoxTextColor);
@@ -107,8 +65,30 @@ public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClic
             toggleView.setChecked(true);
             toggleView.setOnClickListener(this);
             toggleView.setOnLongClickListener(this);
-            addView(toggleView);
+
+            measuredWidth += toggleView.measureWidth(height) + mMargin;
+            if (measuredWidth > getWidth()) {
+                // Move to new row
+                addView(container);
+                container = createHorizontalContainer(height);
+                measuredWidth = toggleView.measureWidth(height) + mMargin;
+            }
+            container.addView(toggleView);
         }
+        addView(container);
+
+        getLayoutParams().height = (height + mMargin) * getChildCount();
+        requestLayout();
+    }
+
+    private LinearLayout createHorizontalContainer(int height) {
+        LinearLayout container = new LinearLayout(getContext());
+        container.setOrientation(HORIZONTAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height);
+        params.bottomMargin = mMargin;
+        params.rightMargin = mMargin;
+        container.setLayoutParams(params);
+        return container;
     }
 
     @Override
@@ -138,9 +118,13 @@ public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClic
     public void setTextColor(int textColor) {
         mCheckBoxTextColor = textColor;
         for (int i = 0; i < getChildCount(); i++) {
-            ChartCheckBox view = (ChartCheckBox)getChildAt(i);
-            view.setCheckedTextColor(mCheckBoxTextColor);
-            view.invalidate();
+            ViewGroup child = (ViewGroup) getChildAt(i);
+            for (int j = 0; j < child.getChildCount(); j++) {
+                ChartCheckBox view = (ChartCheckBox)getChildAt(i);
+                view.setCheckedTextColor(mCheckBoxTextColor);
+                view.invalidate();
+            }
+
         }
     }
 
@@ -148,11 +132,11 @@ public class ChartCheckBoxesContainer extends FrameLayout implements View.OnClic
         mListener = listener;
     }
 
-    private static ChartCheckBox createToggleView(Context context) {
+    private static ChartCheckBox createToggleView(Context context, int height, int rightMargin) {
         ChartCheckBox checkBox = new ChartCheckBox(context);
-        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, height);
+        params.rightMargin = rightMargin;
         checkBox.setLayoutParams(params);
-        checkBox.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         return checkBox;
     }
 }

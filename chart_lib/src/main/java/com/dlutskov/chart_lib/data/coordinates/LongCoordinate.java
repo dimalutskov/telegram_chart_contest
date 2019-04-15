@@ -146,6 +146,3 @@ public class LongCoordinate implements ChartCoordinate<LongCoordinate> {
         return new LongCoordinate(value);
     }
 }
-// TODO Crash on empty
-// ChartPreview
-// Y proper points
