@@ -11,12 +11,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.dlutskov.chart.data.ChartDataProvider;
 import com.dlutskov.chart.view.MoonIconView;
+import com.dlutskov.chart.view.ProgressView;
 import com.dlutskov.chart_lib.data.ChartLinesData;
 import com.dlutskov.chart_lib.utils.ChartUtils;
 import com.dlutskov.chart_lib.ChartView;
@@ -91,8 +91,6 @@ public class MainActivity extends Activity {
         chartsContainer.setLayoutParams(new ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
         chartsContainer.setOrientation(LinearLayout.VERTICAL);
         chartsScrollView.addView(chartsContainer);
-
-        createChartControllers(chartsContainer);
         frameLayout.addView(chartsScrollView);
         /////////////////////
 
@@ -103,6 +101,8 @@ public class MainActivity extends Activity {
         mRootView.addView(frameLayout);
         setContentView(mRootView);
 
+        createChartControllers(chartsContainer);
+
         applyCurrentColors(false);
     }
 
@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
         progressView.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
         progressView.setClickable(true);
 
-        ProgressBar progressBar = new ProgressBar(context);
+        ProgressView progressBar = new ProgressView(context);
         int size = ChartUtils.getPixelForDp(context, 50);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(size, size);
         layoutParams.gravity = Gravity.CENTER;
@@ -123,40 +123,46 @@ public class MainActivity extends Activity {
     }
 
     private void createChartControllers(ViewGroup chartsContainer) {
-        try {
-            // Followers
-            ChartLinesData<DateCoordinate, LongCoordinate> linesData = ChartDataProvider.getOverviewChartData(this, "1");
-            ChartData chartData = new ChartData(ChartData.CHART_ID_LINES, "Followers", "1", linesData);
-            createChartController(chartData, chartsContainer);
+        setProgressVisibility(View.VISIBLE);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                List<ChartData> chartsData = new ArrayList<>();
+                try {
+                    Context ctx = MainActivity.this;
 
-            // Interactions
-            linesData = ChartDataProvider.getOverviewChartData(this, "2");
-            chartData = new ChartData(ChartData.CHART_ID_SCALED_LINES, "Interactions", "2", linesData);
-            createChartController(chartData, chartsContainer);
+                    // Followers
+                    ChartLinesData<DateCoordinate, LongCoordinate> linesData = ChartDataProvider.getOverviewChartData(ctx, "1");
+                    chartsData.add(new ChartData(ChartData.CHART_ID_LINES, "Followers", "1", linesData));
+                    // Interactions
+                    linesData = ChartDataProvider.getOverviewChartData(ctx, "2");
+                    chartsData.add(new ChartData(ChartData.CHART_ID_SCALED_LINES, "Interactions", "2", linesData));
+                    // Fruits
+                    linesData = ChartDataProvider.getOverviewChartData(ctx, "3");
+                    chartsData.add(new ChartData(ChartData.CHART_ID_STACKED_BARS, "Fruits", "3", linesData));
+                    // Views
+                    linesData = ChartDataProvider.getOverviewChartData(ctx, "4");
+                    chartsData.add(new ChartData(ChartData.CHART_ID_SINGLE_BAR, "Views", "4", linesData));
+                    // Fruits
+                    linesData = ChartDataProvider.getOverviewChartData(ctx, "5");
+                    chartsData.add(new ChartData(ChartData.CHART_ID_AREAS,"Fruits","5", linesData));
 
-            // Fruits
-            linesData = ChartDataProvider.getOverviewChartData(this, "3");
-            chartData = new ChartData(ChartData.CHART_ID_STACKED_BARS, "Fruits", "3", linesData);
-            createChartController(chartData, chartsContainer);
-
-            // Views
-            linesData = ChartDataProvider.getOverviewChartData(this, "4");
-            chartData = new ChartData(ChartData.CHART_ID_SINGLE_BAR, "Views", "4", linesData);
-            createChartController(chartData, chartsContainer);
-
-            // Fruits
-            linesData = ChartDataProvider.getOverviewChartData(this, "5");
-            chartData = new ChartData(ChartData.CHART_ID_AREAS,"Fruits","5", linesData);
-            createChartController(chartData, chartsContainer);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Add some space after the last chart
-        mBottomSpace = new View(this);
-        mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, 24)));
-        chartsContainer.addView(mBottomSpace);
+                    mRootView.post(() -> {
+                        setProgressVisibility(View.GONE);
+                        for (ChartData chartData : chartsData) {
+                            createChartController(chartData, chartsContainer);
+                        }
+                        // Add some space after the last chart
+                        mBottomSpace = new View(ctx);
+                        mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(ctx, 24)));
+                        chartsContainer.addView(mBottomSpace);
+                        applyCurrentColors(false);
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     private void createChartController(ChartData chartData, ViewGroup chartsContainer) {
@@ -205,7 +211,9 @@ public class MainActivity extends Activity {
 
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
-                    mBottomSpace.setBackgroundColor(updatedColor);
+                    if (mBottomSpace != null) {
+                        mBottomSpace.setBackgroundColor(updatedColor);
+                    }
                     mTopDivider.setBackgroundColor(updatedColor);
                 });
 
