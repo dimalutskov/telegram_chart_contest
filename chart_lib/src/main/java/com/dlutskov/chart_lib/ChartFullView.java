@@ -359,11 +359,13 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     protected void onShowDataAnimatorStarted(ChartLinesData<X, Y> chartData, int minXIndex, int maxXindex,
                                              ChartPointsDrawer<X, Y, ?> newPointsDrawer, boolean keepHiddenChartLines) {
         // Set new point details drawer
-        ChartPointsDetailsDrawer detailsDrawer = new ChartPointsDetailsDrawer<>(ChartFullView.this, true);
-        detailsDrawer.setBackgroundColor(mPointsDetailsDrawer.getBackgroundColor());
-        detailsDrawer.setBackgroundBorderColor(mPointsDetailsDrawer.getBackgroundBorderColor());
-        detailsDrawer.setXLabelColor(mPointsDetailsDrawer.getXLabelColor());
-        setPointsDetailsDrawer(detailsDrawer);
+        if (!chartData.isPercentage()) {
+            ChartPointsDetailsDrawer detailsDrawer = new ChartPointsDetailsDrawer<>(ChartFullView.this, true);
+            detailsDrawer.setBackgroundColor(mPointsDetailsDrawer.getBackgroundColor());
+            detailsDrawer.setBackgroundBorderColor(mPointsDetailsDrawer.getBackgroundBorderColor());
+            detailsDrawer.setXLabelColor(mPointsDetailsDrawer.getXLabelColor());
+            setPointsDetailsDrawer(detailsDrawer);
+        }
 
         super.onShowDataAnimatorStarted(chartData, minXIndex, maxXindex, newPointsDrawer, keepHiddenChartLines);
 

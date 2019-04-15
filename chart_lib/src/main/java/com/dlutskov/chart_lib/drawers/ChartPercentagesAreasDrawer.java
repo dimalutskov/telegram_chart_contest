@@ -33,7 +33,6 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
     private Y mZero;
     private Y mYMaxValue;
     private Y mYBuf;
-    private Y mMinYValue;
 
     public ChartPercentagesAreasDrawer(ChartView<X, Y> chartView) {
         super(chartView);
@@ -82,16 +81,8 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
             for (DrawingData<Y> drawingData : drawingDataList) {
                 if (!drawingData.isVisible()) continue;
                 Y value = drawingData.pointsData.getPoints().get(i);
-                if (mMinYValue == null) {
-                    mMinYValue = (Y) value.clone();
-                } else if (value.compareTo(mMinYValue) < 0) {
-                    mMinYValue.set(value);
-                }
                 value.getPart(drawingData.getAlpha() / 255f, mYBuf);
                 mYMaxValue.add(mYBuf, mYMaxValue);
-            }
-            if (mMinYValue != null && mYMaxValue.compareTo(mMinYValue) < 0) {
-                mYMaxValue.set(mMinYValue);
             }
             localBounds.setMaxY(mYMaxValue);
 

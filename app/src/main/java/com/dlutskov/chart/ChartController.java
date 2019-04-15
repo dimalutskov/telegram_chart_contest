@@ -430,6 +430,8 @@ public class ChartController implements
         mHeaderView.setTitleText(mChartData.name);
         mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
+        mCollapsedChartBounds = mChartView.getBounds();
+
         mChartView.collapse(new ChartPercentagesAreasDrawer<>(mChartView), mCurrentChartLinesData, mCollapsedChartBounds, true);
     }
 

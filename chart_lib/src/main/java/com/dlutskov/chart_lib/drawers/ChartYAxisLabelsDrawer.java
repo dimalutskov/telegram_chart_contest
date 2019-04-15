@@ -165,7 +165,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     private List<DrawnLabel<Y>> buildLabels(ChartBounds<X, Y> bounds, Rect drawingRect) {
         List<DrawnLabel<Y>> labels = new ArrayList<>();
 
-        int part = drawingRect.height() / (mLabelsCount + 1);
+        int part = drawingRect.height() / (mLabelsCount);
         for (int i = 0; i < mLabelsCount; i++) {
             float y = part * i;
             Y value = (Y) bounds.getMinY().add(bounds.getMinY().distanceTo(bounds.getMaxY()).getPart(y / drawingRect.height()));
@@ -319,7 +319,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         }
 
         void onAfterDraw(Canvas canvas, Rect drawingRect) {
-            int part = drawingRect.height() / (mLabelsCount + 1);
+            int part = drawingRect.height() / (mLabelsCount);
             for (int i = 0; i < mLabels.size(); i++) {
                 DrawnLabel<Y> label = mLabels.get(i);
                 int alpha = (Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255)));
@@ -336,7 +336,7 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
         private void drawGrid(Canvas canvas, Rect drawingRect) {
             float strokeWidth = mGridPaint.getStrokeWidth();
-            int part = drawingRect.height() / (mLabelsCount + 1);
+            int part = drawingRect.height() / (mLabelsCount);
             for (int i = 0; i < mLabels.size(); i++) {
                 int gridAlpha = Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
                 mGridPaint.setAlpha(Math.min(gridAlpha, MAX_GRID_ALPHA));
