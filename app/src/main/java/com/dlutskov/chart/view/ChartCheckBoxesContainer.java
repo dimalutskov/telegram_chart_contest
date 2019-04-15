@@ -104,13 +104,16 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
     @Override
     public boolean onLongClick(View v) {
         for (int i = 0; i < getChildCount(); i++) {
-            ChartCheckBox checkBox = (ChartCheckBox) getChildAt(i);
-            boolean checked = checkBox == v;
-            if (mListener != null && checked != checkBox.isChecked()) {
-                ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
-                mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checked);
+            ViewGroup child = (ViewGroup) getChildAt(i);
+            for (int j = 0; j < child.getChildCount(); j++) {
+                ChartCheckBox checkBox = (ChartCheckBox) child.getChildAt(j);
+                boolean checked = checkBox == v;
+                if (mListener != null && checked != checkBox.isChecked()) {
+                    ChartPointsData chartPointsData = (ChartPointsData) checkBox.getTag();
+                    mListener.onChartLineCheckBoxStateChanged(chartPointsData.getId(), checked);
+                }
+                checkBox.setChecked(checked);
             }
-            checkBox.setChecked(checked);
         }
         return true;
     }
@@ -120,11 +123,10 @@ public class ChartCheckBoxesContainer extends LinearLayout implements View.OnCli
         for (int i = 0; i < getChildCount(); i++) {
             ViewGroup child = (ViewGroup) getChildAt(i);
             for (int j = 0; j < child.getChildCount(); j++) {
-                ChartCheckBox view = (ChartCheckBox)getChildAt(i);
+                ChartCheckBox view = (ChartCheckBox)child.getChildAt(j);
                 view.setCheckedTextColor(mCheckBoxTextColor);
                 view.invalidate();
             }
-
         }
     }
 

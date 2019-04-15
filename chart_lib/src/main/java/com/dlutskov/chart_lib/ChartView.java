@@ -187,6 +187,14 @@ public class ChartView<X extends ChartCoordinate, Y extends ChartCoordinate> ext
         onBoundsUpdated(currentBounds, mBounds);
     }
 
+    public boolean hasVisiblePoints() {
+        return mHiddenChartLines.size() != mLinesData.getYPoints().size();
+    }
+
+    public void showAllPoints() {
+        mHiddenChartLines.clear();
+    }
+
     public void updatePointsVisibility(String pointsId, boolean visible) {
         if (visible) {
             mHiddenChartLines.remove(pointsId);

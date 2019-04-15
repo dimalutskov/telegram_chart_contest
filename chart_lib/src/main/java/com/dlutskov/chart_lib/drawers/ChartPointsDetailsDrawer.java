@@ -244,22 +244,30 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
                 if (mHiddenChartLines.contains(pointsData.getId())) continue;
                 mYSum.add(pointsData.getPoints().get(mSelectedPointPosition), mYSum);
             }
-            float percentsSum = 0;
+            int percentsSum = 0;
+            int lastPercents = 0;
+            int lastPercentsPosition = 0;
             for (int i = 0; i < mData.getYPoints().size(); i++) {
                 ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
                 if (mHiddenChartLines.contains(pointsData.getId())) continue;
-                float percents;
-                if (i == mData.getYPoints().size() - 1) {
-                    percents = 1 - percentsSum;
-                } else {
-                    percents = pointsData.getPoints().get(mSelectedPointPosition).calcCoordinateRatio(mZero, mYSum);
-                }
-                percentsSum += percents;
-                String string =  (int)(percents * 100) + "%";
-                if (percents < 0.1f) {
+                lastPercents = Math.round(pointsData.getPoints().get(mSelectedPointPosition).calcCoordinateRatio(mZero, mYSum) * 100);
+                percentsSum += lastPercents;
+
+                String string =  lastPercents + "%";
+                if (lastPercents < 0.1f) {
                     string = "  " + string;
                 }
+
                 mPercentagesStrings[i] = string;
+                lastPercentsPosition = i;
+            }
+            if (percentsSum != 100) {
+                lastPercents = lastPercents +  (100 - percentsSum);
+                String string =  lastPercents + "%";
+                if (lastPercents < 0.1f) {
+                    string = "  " + string;
+                }
+                mPercentagesStrings[lastPercentsPosition] = string;
             }
         }
 

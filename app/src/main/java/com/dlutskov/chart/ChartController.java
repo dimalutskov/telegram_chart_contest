@@ -350,8 +350,13 @@ public class ChartController implements
                         mChartPreview.setVisibility(View.INVISIBLE);
                         mCheckBoxesContainer.setVisibility(View.VISIBLE);
                         mCheckBoxesContainer.createCheckBoxes(finalData);
+                        mCheckBoxesContainer.post(() -> {
+                            ViewGroup parent = (ViewGroup) mCheckBoxesContainer.getParent();
+                            ViewGroup.LayoutParams params = parent.getLayoutParams();
+                            params.height = (mCheckBoxesContainer.getHeight() + ChartUtils.getPixelForDp(mActivity, PADDING_GENERAL) * 2);
+                            parent.setLayoutParams(params);
+                        });
                     }
-
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
                     mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, createPointsDrawer(finalData, mChartPreview));
                 }
@@ -374,7 +379,7 @@ public class ChartController implements
     }
 
     private void onHeaderTitleClicked() {
-        if (!isExpanded || mChartView.isDataAnimatorRunning()) {
+        if (!isExpanded || mChartView.isDataAnimatorRunning() || !mChartView.hasVisiblePoints()) {
             return;
         }
 
@@ -405,14 +410,22 @@ public class ChartController implements
             mHeaderView.setTitleText(mChartData.name);
             mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
-            boolean keepHiddenCHarts = true;
+            boolean keepHiddenCharts = true;
+            if (!mChartView.hasVisiblePoints()) {
+                mChartView.showAllPoints();
+            }
             if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
                 mChartPreview.setVisibility(View.VISIBLE);
                 mCheckBoxesContainer.setVisibility(View.INVISIBLE);
-                keepHiddenCHarts = false;
+                ViewGroup parent = (ViewGroup) mCheckBoxesContainer.getParent();
+                ViewGroup.LayoutParams params = parent.getLayoutParams();
+                params.height = ChartUtils.getPixelForDp(mActivity, 40 + PADDING_GENERAL * 2);
+                parent.setLayoutParams(params);
+                keepHiddenCharts = false;
+                mChartView.showAllPoints();
             }
 
-            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds, keepHiddenCHarts);
+            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds, keepHiddenCharts);
             mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
         }
     }

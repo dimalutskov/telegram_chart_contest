@@ -36,7 +36,7 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
         }
     }
 
-    private void drawStackedBars(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect,
+    void drawStackedBars(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Rect drawingRect,
                                    int columnWidth, int lineIndex, int pointIndex) {
         float prevY = drawingRect.bottom;
         for (ChartPointsData<Y> pointsData : data.getYPoints()) {
