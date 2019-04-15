@@ -30,6 +30,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     private final Paint mBackgroundPaint;
 
     private final Paint mXLabelTextPaint;
+    private final Paint mPercentsTextPaint;
     private final Paint mLabelTextPaint;
     private final Paint mValuesTextPaint;
 
@@ -75,6 +76,10 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     // Contains ids of hidden chart lines - to not show their points also
     private Set<String> mHiddenChartLines = new HashSet<>();
 
+    private Y mZero;
+    private Y mYSum;
+    private String[] mPercentagesStrings;
+
     private boolean isShown;
 
     private final boolean isExpandedPoints;
@@ -107,6 +112,10 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         mLabelTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
         mLabelTextPaint.setTextSize(mTextSize);
 
+        mPercentsTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
+        mPercentsTextPaint.setTextSize(mTextSize);
+        mPercentsTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+
         mValuesTextPaint = createPaint(Paint.Style.FILL_AND_STROKE, Color.BLACK);
         mValuesTextPaint.setTextSize(mTextSize);
 
@@ -125,6 +134,15 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenPoints) {
         super.updateData(data, bounds, hiddenPoints);
         mHiddenChartLines = new HashSet<>(hiddenPoints);
+
+        if (mZero == null) {
+            mZero = (Y) bounds.getMinY().zero();
+            mYSum = (Y) mZero.clone();
+        }
+        mPercentagesStrings = new String[data.getYPoints().size()];
+        for (int i = 0; i < data.getYPoints().size(); i++) {
+            mPercentagesStrings[i] = "";
+        }
     }
 
     @Override
@@ -148,7 +166,11 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         for (ChartPointsData chartPointsData : data.getYPoints()) {
             if (mHiddenChartLines.contains(chartPointsData.getId())) continue;
-            float textWidth = mLabelTextPaint.measureText(chartPointsData.getName());
+            String name = chartPointsData.getName();
+            if (mData.isPercentage()) {
+                name += " 100%";
+            }
+            float textWidth = mLabelTextPaint.measureText(name);
             if (textWidth > maxLabelWidth) {
                 maxLabelWidth = textWidth;
             }
@@ -205,10 +227,42 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
         canvas.drawText(xLabel, leftX, yPosition, mXLabelTextPaint);
 
         // Draw > glyph
-        String glyph = ">";
-        canvas.drawText(glyph, rightX - mXLabelTextPaint.measureText(glyph), yPosition, mXLabelTextPaint);
+//        String glyph = ">";
+//        canvas.drawText(glyph, rightX - mXLabelTextPaint.measureText(glyph), yPosition, mXLabelTextPaint);
+
+        float labelXPosition = leftX;
 
         mLabelTextPaint.setAlpha(mCurrentAlpha);
+
+        if (mData.isPercentage()) {
+            mPercentsTextPaint.setAlpha(mCurrentAlpha);
+            labelXPosition += mLabelTextPaint.measureText("100% ");
+            // Calculate local bounds
+            mYSum.set(mZero);
+            for (int i = 0; i < mData.getYPoints().size(); i++) {
+                ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
+                if (mHiddenChartLines.contains(pointsData.getId())) continue;
+                mYSum.add(pointsData.getPoints().get(mSelectedPointPosition), mYSum);
+            }
+            float percentsSum = 0;
+            for (int i = 0; i < mData.getYPoints().size(); i++) {
+                ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
+                if (mHiddenChartLines.contains(pointsData.getId())) continue;
+                float percents;
+                if (i == mData.getYPoints().size() - 1) {
+                    percents = 1 - percentsSum;
+                } else {
+                    percents = pointsData.getPoints().get(mSelectedPointPosition).calcCoordinateRatio(mZero, mYSum);
+                }
+                percentsSum += percents;
+                String string =  (int)(percents * 100) + "%";
+                if (percents < 0.1f) {
+                    string = "  " + string;
+                }
+                mPercentagesStrings[i] = string;
+            }
+        }
+
         // Draw Y labels
         for (int i = 0; i < mData.getYPoints().size(); i++) {
             ChartPointsData<Y> pointsData = mData.getYPoints().get(i);
@@ -219,8 +273,12 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
             mValuesTextPaint.setColor(pointsData.getColor());
             mValuesTextPaint.setAlpha(mCurrentAlpha);
 
+            if (mData.isPercentage()) {
+                canvas.drawText(mPercentagesStrings[i], leftX, yPosition + mTextSize + mLabelVerticalPadding, mPercentsTextPaint);
+            }
+
             String nameString = pointsData.getName();
-            canvas.drawText(nameString, leftX, yPosition + mTextSize + mLabelVerticalPadding, mLabelTextPaint);
+            canvas.drawText(nameString, labelXPosition, yPosition + mTextSize + mLabelVerticalPadding, mLabelTextPaint);
 
             String valueString = pointsData.getPoints().get(mSelectedPointPosition).getFullName();
             canvas.drawText(valueString, rightX - mValuesTextPaint.measureText(valueString), yPosition + mTextSize + mLabelVerticalPadding, mValuesTextPaint);
