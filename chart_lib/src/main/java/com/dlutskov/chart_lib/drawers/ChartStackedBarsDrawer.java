@@ -47,6 +47,9 @@ public class ChartStackedBarsDrawer <X extends ChartCoordinate, Y extends ChartC
             float y = ChartUtils.calcYCoordinate(bounds, drawingRect, pointsData.getPoints().get(pointIndex));
             float appearingRatio = drawingData.getAlpha() / (float) 255; // Reduce bar height with reducing bar visibility
             float newY = prevY - (drawingRect.bottom - y) * appearingRatio;
+            if (newY - prevY == 0) {
+                newY = prevY - 3; // TODO minHeight
+            }
             drawingData.mLines[lineIndex] = x + columnWidth / 2;
             drawingData.mLines[lineIndex + 1] = prevY;
             drawingData.mLines[lineIndex + 2] = x + columnWidth / 2;

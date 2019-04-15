@@ -28,9 +28,16 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     private int mRotationAngle = 0;
 
+    private final Paint mSelectedPointsDividerPaint;
+
     public ChartPercentagesAreasDrawer(ChartView<X, Y> chartView) {
         super(chartView);
         chartView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
+        mSelectedPointsDividerPaint = new Paint();
+        mSelectedPointsDividerPaint.setAntiAlias(true);
+        mSelectedPointsDividerPaint.setStyle(Paint.Style.STROKE);
+        mSelectedPointsDividerPaint.setStrokeWidth(ChartUtils.getPixelForDp(chartView.getContext(), 1));
     }
 
     @Override
@@ -135,6 +142,13 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
         if (mRotationAngle != 0) {
             canvas.restore();
         }
+
+        // Draw selected point divider
+        if (mSelectedPointIndex > 0) {
+            float xPointsPosition = ChartUtils.calcXCoordinate(getBounds(), drawingRect, mSelectedPointIndex);
+            mSelectedPointsDividerPaint.setAlpha(Math.min(MAX_GRID_ALPHA, mSelectedPointAlpha));
+            canvas.drawLine(xPointsPosition, drawingRect.top, xPointsPosition, drawingRect.bottom, mSelectedPointsDividerPaint);
+        }
     }
 
     public void setClipValue(float clipValue) {
@@ -143,6 +157,10 @@ public class ChartPercentagesAreasDrawer<X extends ChartCoordinate, Y extends Ch
 
     public void setRotationAngle(int angle) {
         mRotationAngle = angle;
+    }
+
+    public void setSelectedPointsDividerColor(int color) {
+        mSelectedPointsDividerPaint.setColor(color);
     }
 
     static class DrawingData<C extends ChartCoordinate> extends ChartPointsDrawer.DrawingData<C> {

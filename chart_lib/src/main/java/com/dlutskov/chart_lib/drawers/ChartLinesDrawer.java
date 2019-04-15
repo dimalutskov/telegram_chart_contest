@@ -110,7 +110,7 @@ public class ChartLinesDrawer<X extends ChartCoordinate, Y extends ChartCoordina
 
         // Draw vertical line
         if (mDrawSelectedPointsDivider && mSelectedPointIndex > 0 && mSelectedPointAlpha > 0) {
-            mSelectedPointsDividerPaint.setAlpha(mSelectedPointAlpha);
+            mSelectedPointsDividerPaint.setAlpha(Math.min(MAX_GRID_ALPHA, mSelectedPointAlpha));
             canvas.drawLine(xPointsPosition, drawingRect.top, xPointsPosition, drawingRect.bottom, mSelectedPointsDividerPaint);
         }
 

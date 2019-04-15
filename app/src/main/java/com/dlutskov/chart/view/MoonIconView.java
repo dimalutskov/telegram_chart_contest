@@ -44,6 +44,11 @@ public class MoonIconView extends TextView {
         canvas.drawCircle(size * 0.75f, size * 0.3f, halfSize * 0.9f, mBackgroundPaint);
     }
 
+    public void setMainColor(int color) {
+        mMainPaint.setColor(color);
+        invalidate();
+    }
+
     public void setBackgroundColor(int color) {
         mBackgroundPaint.setColor(color);
         invalidate();

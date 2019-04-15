@@ -3,6 +3,7 @@ package com.dlutskov.chart;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -45,7 +46,9 @@ public class MainActivity extends Activity {
     private LinearLayout mRootView;
 
     private ViewGroup mHeaderLayout;
+    private TextView mHeaderTextView;
     private MoonIconView mIconMoon;
+    private View mTopDivider;
     private View mBottomSpace;
 
     private View mProgress;
@@ -63,6 +66,7 @@ public class MainActivity extends Activity {
 
         // Header Container
         mHeaderLayout = createHeaderView(this);
+        mHeaderTextView = (TextView) mHeaderLayout.getChildAt(0);
         mIconMoon = (MoonIconView) mHeaderLayout.getChildAt(1);
         mIconMoon.setOnClickListener(v -> {
             if (!mProgress.isShown()) {
@@ -71,6 +75,10 @@ public class MainActivity extends Activity {
             }
         });
         mRootView.addView(mHeaderLayout);
+
+        mTopDivider = new View(this);
+        mTopDivider.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, 1)));
+        mRootView.addView(mTopDivider);
 
         FrameLayout frameLayout = new FrameLayout(this);
         frameLayout.setLayoutParams(new LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
@@ -147,7 +155,7 @@ public class MainActivity extends Activity {
 
         // Add some space after the last chart
         mBottomSpace = new View(this);
-        mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, PADDING_GENERAL)));
+        mBottomSpace.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(this, 24)));
         chartsContainer.addView(mBottomSpace);
     }
 
@@ -175,6 +183,7 @@ public class MainActivity extends Activity {
         titleView.setLayoutParams(textParams);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         titleView.setTextColor(Color.WHITE);
+        titleView.setTypeface(null, Typeface.BOLD);
         titleView.setText("Telegram Chart Contest");
         containerView.addView(titleView);
 
@@ -196,13 +205,21 @@ public class MainActivity extends Activity {
 
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
-                    mRootView.setBackgroundColor(updatedColor);
+                    mBottomSpace.setBackgroundColor(updatedColor);
+                    mTopDivider.setBackgroundColor(updatedColor);
                 });
 
-        AppDesign.applyColorWithAnimation(AppDesign.bgHeader(prevTheme),
-                AppDesign.bgHeader(curTheme), duration, updatedColor -> {
+        AppDesign.applyColorWithAnimation(AppDesign.bgChart(prevTheme),
+                AppDesign.bgChart(curTheme), duration, updatedColor -> {
+                    mRootView.setBackgroundColor(updatedColor);
                     mHeaderLayout.setBackgroundColor(updatedColor);
                     mIconMoon.setBackgroundColor(updatedColor);
+                });
+
+        AppDesign.applyColorWithAnimation(AppDesign.getChartHeaderText(prevTheme),
+                AppDesign.getChartHeaderText(curTheme), duration, updatedColor -> {
+                    mHeaderTextView.setTextColor(updatedColor);
+                    mIconMoon.setMainColor(updatedColor);
                 });
 
         for (ChartController controller : mChartsControllers) {

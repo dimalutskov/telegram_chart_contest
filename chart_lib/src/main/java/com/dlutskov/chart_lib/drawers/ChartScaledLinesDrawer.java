@@ -97,6 +97,9 @@ public class ChartScaledLinesDrawer<X extends ChartCoordinate, Y extends ChartCo
                     // No need to update y bounds animator already running to move to same target
                     continue;
                 } else {
+                    long passedTime = System.currentTimeMillis() - boundsAnimHandler.getStartTime() + 40;
+                    float progress = passedTime / (float) boundsAnimHandler.getDuration();
+                    boundsAnimHandler.update(progress);
                     // Use currently animated bounds
                     localBounds.setMinY(boundsAnimHandler.getCurrentYBounds().first);
                     localBounds.setMaxY(boundsAnimHandler.getCurrentYBounds().second);

@@ -23,6 +23,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         extends ChartDataDrawer<X, Y>
         implements BoundsUpdateAnimator.Listener<Y> {
 
+    public static final int MAX_GRID_ALPHA = 25;
+
     protected final List<P> drawingDataList = new ArrayList<>();
 
     private BoundsUpdateAnimator<X, Y> mBoundsAnimHandler;
@@ -47,6 +49,8 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     private long mAnimDuration;
 
     protected boolean mAnimateBoundsChanges = true;
+
+    protected boolean mAnimateVisibilityChanges = true;
 
     protected ChartPointsDrawer(ChartView chartView) {
         super(chartView);
@@ -79,6 +83,10 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
         mAnimateBoundsChanges = animateBoundsChanges;
     }
 
+    public void setAnimateVisibilityChanges(boolean animateVisibilityChanges) {
+        mAnimateVisibilityChanges = animateVisibilityChanges;
+    }
+
     @Override
     public void updateData(ChartLinesData<X, Y> data, ChartBounds<X, Y> bounds, Set<String> hiddenChartPoints) {
         super.updateData(data, bounds, hiddenChartPoints);
@@ -105,6 +113,9 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
                 // No need to update y bounds animator already running to move to same target
                 return;
             } else {
+                long passedTime = System.currentTimeMillis() - mBoundsAnimHandler.getStartTime() + 40;
+                float progress = passedTime / (float) mBoundsAnimHandler.getDuration();
+                mBoundsAnimHandler.update(progress);
                 // Use currently animated bounds
                 currentBounds.setMinY(mBoundsAnimHandler.getCurrentYBounds().first);
                 currentBounds.setMaxY(mBoundsAnimHandler.getCurrentYBounds().second);
@@ -125,6 +136,12 @@ public abstract class ChartPointsDrawer<X extends ChartCoordinate, Y extends Cha
     public void updatePointsVisibility(final String pointsId, boolean visible) {
         final P linesDrawer = findDrawingData(pointsId);
         if (linesDrawer == null) {
+            return;
+        }
+
+        if (!mAnimateVisibilityChanges) {
+            linesDrawer.setVisible(visible);
+            onVisibilityAnimatorUpdate(linesDrawer, visible ? 255 : 0);
             return;
         }
 

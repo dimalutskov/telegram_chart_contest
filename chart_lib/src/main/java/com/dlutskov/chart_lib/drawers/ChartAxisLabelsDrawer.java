@@ -14,6 +14,8 @@ import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
  */
 public abstract class ChartAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCoordinate> extends ChartDataDrawer<X, Y> {
 
+    static final int MAX_LABEL_ALPHA = 140;
+
     /**
      * Used to tell the ChartView that the drawing rect of the drawer will be the same as the chart size
      */

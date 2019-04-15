@@ -35,6 +35,8 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
 
     private final Listener mListener;
 
+    private long mStartTime;
+
     BoundsUpdateAnimator(ChartBounds<X, Y> initialBounds, ChartBounds<X, Y> targetBounds,
                          Listener<Y> listener) {
         mInitialYBounds = new Pair<>(initialBounds.getMinY(), initialBounds.getMaxY());
@@ -44,6 +46,8 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     void start(long duration, Animator.AnimatorListener animatorListener) {
+        mStartTime = System.currentTimeMillis();
+
         cancel();
         mAnimator = ValueAnimator.ofFloat(0f, 1f).setDuration(duration);
         mAnimator.addUpdateListener(this);
@@ -79,7 +83,11 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
     @Override
     public void onAnimationUpdate(ValueAnimator animation) {
         float progress = (float) animation.getAnimatedValue();
+        update(progress);
+    }
 
+    public void update(float progress) {
+        progress = Math.min(progress, 1f);
         mInitialYBounds.first.distanceTo(mTargetYBounds.first, mCurrentYBounds.first);
         mCurrentYBounds.first.getPart(progress, mCurrentYBounds.first);
         mInitialYBounds.first.add(mCurrentYBounds.first, mCurrentYBounds.first);
@@ -89,6 +97,14 @@ class BoundsUpdateAnimator<X extends ChartCoordinate, Y extends ChartCoordinate>
         mInitialYBounds.second.add(mCurrentYBounds.second, mCurrentYBounds.second);
 
         mListener.onBoundsAnimationUpdated(mCurrentYBounds, progress);
+    }
+
+    public long getStartTime() {
+        return mStartTime;
+    }
+
+    public long getDuration() {
+        return mAnimator == null ? 0 : mAnimator.getDuration();
     }
 
 }

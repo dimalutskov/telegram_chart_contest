@@ -3,6 +3,7 @@ package com.dlutskov.chart;
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 import com.dlutskov.chart.data.ChartDataProvider;
@@ -67,7 +68,7 @@ public class ChartController implements
 
     void attachChart(ViewGroup container) {
         mTopSpaceView = new View(mActivity);
-        mTopSpaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(mActivity, 16)));
+        mTopSpaceView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, ChartUtils.getPixelForDp(mActivity, 24)));
         container.addView(mTopSpaceView);
 
         // Chart header
@@ -78,13 +79,39 @@ public class ChartController implements
 
         // Chart Full View
         mChartView = createChartFullView(mActivity);
-        container.addView(mChartView);
         // Chart Preview
         mChartPreview = createChartPreviewView(mActivity);
-        container.addView(mChartPreview);
         // Chart CheckBoxes
         mCheckBoxesContainer = createCheckboxesContainer(mActivity);
-        container.addView(mCheckBoxesContainer);
+
+        container.addView(mChartView);
+        if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
+            FrameLayout previewContainer = new FrameLayout(mActivity);
+            previewContainer.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
+
+            // Preview
+            int height = ChartUtils.getPixelForDp(mActivity, 40);
+            int margin = ChartUtils.getPixelForDp(mActivity, PADDING_GENERAL);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(MATCH_PARENT, height);
+            params.setMargins(margin, margin, margin, margin);
+            mChartPreview.setLayoutParams(params);
+
+            // Checkboxes
+            params = new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
+            params.topMargin = ChartUtils.getPixelForDp(mActivity, 22);
+            params.leftMargin = margin;
+            params.rightMargin = margin;
+            mCheckBoxesContainer.setLayoutParams(params);
+            mCheckBoxesContainer.setVisibility(View.INVISIBLE);
+
+            previewContainer.addView(mChartPreview);
+            previewContainer.addView(mCheckBoxesContainer);
+
+            container.addView(previewContainer);
+        } else {
+            container.addView(mChartPreview);
+            container.addView(mCheckBoxesContainer);
+        }
 
         mChartView.setListener(this);
         mChartPreview.setListener(this);
@@ -110,6 +137,7 @@ public class ChartController implements
         if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
             mChartView.setMinYValue(LongCoordinate.valueOf(0));
             mChartPreview.setMinYValue(LongCoordinate.valueOf(0));
+            mChartView.getYLabelsDrawer().setDrawGridOverPoints(true);
         } else if (chartData.isYScaled()) {
             // Bind yLabelsDrawer to first graph
             ChartPointsData<LongCoordinate> firstGraph = mCurrentChartLinesData.getYPoints().get(0);
@@ -138,12 +166,7 @@ public class ChartController implements
         ChartPointsDrawer<DateCoordinate, LongCoordinate, ?> result;
         if (chartType.equals(ChartLinesData.CHART_TYPE_BAR) || chartType.equals(ChartLinesData.CHART_TYPE_AREA)) {
             if (chartData.isPercentage()) {
-//                if (chartView == mChartPreview) {
-//                    // TODO optimize
-//                    return new ChartStackedBarsDrawer<>(chartView);
-//                } else {
                 result = new ChartPercentagesAreasDrawer<>(chartView);
-//                }
             } else if (chartData.isStacked()) {
                 result = new ChartStackedBarsDrawer<>(chartView);
             } else {
@@ -157,9 +180,13 @@ public class ChartController implements
 
         if (result instanceof ChartLinesDrawer) {
             ((ChartLinesDrawer)result).setSelectedPointsDividerColor(AppDesign.chartGridColor(AppDesign.getTheme()));
-            ((ChartLinesDrawer)result).setSelectedPointCircleBackground(AppDesign.bgActivity(AppDesign.getTheme()));
-        } else if (result instanceof ChartBarsDrawer) {
-            ((ChartBarsDrawer)result).setCoverColor(AppDesign.bgActivity(AppDesign.getTheme()));
+            ((ChartLinesDrawer)result).setSelectedPointCircleBackground(AppDesign.bgChart(AppDesign.getTheme()));
+        }
+        if (result instanceof ChartPercentagesAreasDrawer) {
+            ((ChartPercentagesAreasDrawer)result).setSelectedPointsDividerColor(AppDesign.bgChart(AppDesign.getTheme()));
+        }
+        if (result instanceof ChartBarsDrawer) {
+            ((ChartBarsDrawer)result).setCoverColor(AppDesign.bgChart(AppDesign.getTheme()));
         }
 
         return result;
@@ -179,6 +206,13 @@ public class ChartController implements
 
         AppDesign.applyColorWithAnimation(AppDesign.bgActivity(prevTheme),
                 AppDesign.bgActivity(curTheme), duration, updatedColor -> {
+                    mTopSpaceView.setBackgroundColor(updatedColor);
+                    mChartView.getPointsDetailsDrawer().setBackgroundBorderColor(updatedColor);
+                });
+
+        AppDesign.applyColorWithAnimation(AppDesign.bgChart(prevTheme),
+                AppDesign.bgChart(curTheme), duration, updatedColor -> {
+                    mChartPreview.setSelectedBackgroundColor(updatedColor);
                     ChartPointsDrawer pointsDrawer = mChartView.getPointsDrawer();
                     if (pointsDrawer instanceof ChartBarsDrawer) {
                         ((ChartBarsDrawer) pointsDrawer).setCoverColor(updatedColor);
@@ -191,10 +225,12 @@ public class ChartController implements
         AppDesign.applyColorWithAnimation(AppDesign.chartGridColor(prevTheme),
                 AppDesign.chartGridColor(curTheme), duration, updatedColor -> {
                     mChartView.getYLabelsDrawer().setGridColor(updatedColor);
-                    mChartView.getPointsDetailsDrawer().setBackgroundBorderColor(updatedColor);
                     ChartPointsDrawer pointsDrawer = mChartView.getPointsDrawer();
                     if (pointsDrawer instanceof ChartLinesDrawer) {
                         ((ChartLinesDrawer) pointsDrawer).setSelectedPointsDividerColor(updatedColor);
+                    }
+                    if (pointsDrawer instanceof ChartPercentagesAreasDrawer) {
+                        ((ChartPercentagesAreasDrawer) pointsDrawer).setSelectedPointsDividerColor(updatedColor);
                     }
                     if (mYRightLabelsDrawer != null) {
                         mYRightLabelsDrawer.setGridColor(updatedColor);
@@ -216,19 +252,9 @@ public class ChartController implements
                     mChartView.getPointsDetailsDrawer().setXLabelColor(updatedColor);
                 });
 
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPreview(prevTheme),
-                AppDesign.bgChartPreview(curTheme), duration, updatedColor -> {
-                    mChartPreview.setBackgroundColor(updatedColor);
-                });
-
         AppDesign.applyColorWithAnimation(AppDesign.bgChartPreviewUnselectedArea(prevTheme),
                 AppDesign.bgChartPreviewUnselectedArea(curTheme), duration, updatedColor -> {
                     mChartPreview.setUnselectedBackgroundColor(updatedColor);
-                });
-
-        AppDesign.applyColorWithAnimation(AppDesign.bgChartPreviewSelectedArea(prevTheme),
-                AppDesign.bgChartPreviewSelectedArea(curTheme), duration, updatedColor -> {
-                    mChartPreview.setSelectedBackgroundColor(updatedColor);
                 });
 
         AppDesign.applyColorWithAnimation(AppDesign.chartPreviewBordersColor(prevTheme),
@@ -322,6 +348,12 @@ public class ChartController implements
                     mHeaderView.setTitleText("Zoom Out"); // TODO Hardcoded
                     mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
+                    if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
+                        mChartPreview.setVisibility(View.INVISIBLE);
+                        mCheckBoxesContainer.createCheckBoxes(finalData);
+                        mCheckBoxesContainer.setVisibility(View.VISIBLE);
+                    }
+
                     mChartView.expand(createPointsDrawer(finalData, mChartView), finalData, pointsIndex, newMinXIndex, newMaxXIndex);
                     mChartPreview.updateChartDataWithAnimation(finalData, newMinXIndex, newMaxXIndex, createPointsDrawer(finalData, mChartPreview));
                 }
@@ -375,7 +407,14 @@ public class ChartController implements
             mHeaderView.setTitleText(mChartData.name);
             mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
-            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds);
+            boolean keepHiddenCHarts = true;
+            if (mChartData.id.equals(ChartData.CHART_ID_SINGLE_BAR)) {
+                mChartPreview.setVisibility(View.VISIBLE);
+                mCheckBoxesContainer.setVisibility(View.INVISIBLE);
+                keepHiddenCHarts = false;
+            }
+
+            mChartView.collapse(createPointsDrawer(mCurrentChartLinesData, mChartView), mCurrentChartLinesData, mCollapsedChartBounds, keepHiddenCHarts);
             mChartPreview.updateChartDataWithAnimation(mCurrentChartLinesData, newMinXIndex, newMaxXIndex, createPointsDrawer(mCurrentChartLinesData, mChartPreview));
         }
     }
@@ -384,7 +423,7 @@ public class ChartController implements
         mHeaderView.setTitleText(mChartData.name);
         mHeaderView.setTitleColor(AppDesign.getZoomOutText(AppDesign.getTheme()));
 
-        mChartView.collapse(new ChartPercentagesAreasDrawer<>(mChartView), mCurrentChartLinesData, mCollapsedChartBounds);
+        mChartView.collapse(new ChartPercentagesAreasDrawer<>(mChartView), mCurrentChartLinesData, mCollapsedChartBounds, true);
     }
 
     private static ChartHeaderView createChartHeaderView(Context ctx) {
@@ -423,9 +462,9 @@ public class ChartController implements
         ChartCheckBoxesContainer view = new ChartCheckBoxesContainer(ctx);
         int margin = ChartUtils.getPixelForDp(ctx, PADDING_GENERAL);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
-        params.topMargin = ChartUtils.getPixelForDp(ctx, 4);
         params.leftMargin = margin;
         params.rightMargin = margin;
+        params.bottomMargin = margin;
         view.setLayoutParams(params);
         return view;
     }

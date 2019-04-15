@@ -17,8 +17,11 @@ import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 import com.dlutskov.chart_lib.utils.Pair;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static com.dlutskov.chart_lib.drawers.ChartPointsDrawer.MAX_GRID_ALPHA;
 
 /**
  * Draws Y axis labels according to current chart's y bounds
@@ -42,6 +45,8 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
     private ChartBounds<X, Y> mLastBounds;
 
+    private Y mZero;
+
     // Dividers paint
     protected Paint mGridPaint;
     // Padding between divider and label
@@ -63,6 +68,13 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
      */
     private String mScaledPointsId;
 
+    private ValueAnimator mAlphaAnimator;
+
+    private boolean mDrawGridOverPoints;
+
+    // Store hidden chart lines to show/hide when first/last chart shown/hidden
+    private Set<String> mHiddenChartLines = new HashSet<>();
+
     private long mAnimDuration = ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION;
 
     public ChartYAxisLabelsDrawer(ChartView<X, Y> chartView, int size) {
@@ -83,6 +95,10 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             // Drawer is related to specific points - so need to calculate bounds only for this points
             bounds = calculateScaledBounds(bounds, data);
         }
+        if (mZero == null) {
+            mZero = (Y) bounds.getMaxY().zero();
+        }
+        mHiddenChartLines = new HashSet<>(hiddenChartPoints);
         super.updateData(data, bounds, hiddenChartPoints);
     }
 
@@ -165,13 +181,52 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
     }
 
     @Override
-    public void onDraw(Canvas canvas, Rect drawingRect) {
-        if (mDrawGrid) {
-            // Draws grid for current labels
-            mLabelsAppearAnimator.onDraw(canvas, drawingRect);
-            for (LabelsAnimatorHandler animatorHandler : mLabelsDisappearAnimators) {
-                animatorHandler.onDraw(canvas, drawingRect);
+    public void updatePointsVisibility(String pointsId, boolean visibility) {
+        super.updatePointsVisibility(pointsId, visibility);
+
+        int hiddenChartLinesCount = mHiddenChartLines.size();
+
+        if (visibility) {
+            mHiddenChartLines.remove(pointsId);
+        } else {
+            mHiddenChartLines.add(pointsId);
+        }
+
+        if (mScaledPointsId != null) {
+            if (pointsId.equals(mScaledPointsId)) {
+                // Labels bound to specific points
+                startAlphaAnimator(visibility ? 255 : 0);
             }
+        } else {
+            int pointsSize = getData().getYPoints().size();
+            if (mHiddenChartLines.size() == pointsSize) {
+                // Last line was hidden
+                startAlphaAnimator(0);
+            } else if (visibility && hiddenChartLinesCount == pointsSize) {
+                startAlphaAnimator(255);
+            }
+        }
+    }
+
+    private void startAlphaAnimator(int targetAlpha) {
+        if (mAlphaAnimator != null) {
+            mAlphaAnimator.cancel();
+        }
+        mAlphaAnimator = ValueAnimator.ofInt(mAlpha, targetAlpha)
+                .setDuration(ChartUtils.DEFAULT_CHART_CHANGES_ANIMATION_DURATION);
+        mAlphaAnimator.addUpdateListener(animation -> {
+            setAlpha((Integer) animation.getAnimatedValue());
+            mChartView.invalidate();
+        });
+        mAlphaAnimator.start();
+    }
+
+    @Override
+    public void onDraw(Canvas canvas, Rect drawingRect) {
+        // Draws grid for current labels
+        mLabelsAppearAnimator.onDraw(canvas, drawingRect);
+        for (LabelsAnimatorHandler animatorHandler : mLabelsDisappearAnimators) {
+            animatorHandler.onDraw(canvas, drawingRect);
         }
     }
 
@@ -200,6 +255,10 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
     public void setDrawGrid(boolean drawGrid) {
         mDrawGrid = drawGrid;
+    }
+
+    public void setDrawGridOverPoints(boolean drawGridOverPoints) {
+        mDrawGridOverPoints = drawGridOverPoints;
     }
 
     public void setGridStrokeWidth(int strokeWidth) {
@@ -259,13 +318,8 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
         }
 
         void onDraw(Canvas canvas, Rect drawingRect) {
-            float strokeWidth = mGridPaint.getStrokeWidth();
-            int part = drawingRect.height() / (mLabelsCount + 1);
-            for (int i = 0; i < mLabels.size(); i++) {
-                mGridPaint.setAlpha(Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255)));
-                float y = drawingRect.bottom - part * i;
-                y = calculateAnimatedY(y, drawingRect);
-                canvas.drawLine(drawingRect.left, y - strokeWidth, drawingRect.right, y - strokeWidth, mGridPaint);
+            if (mDrawGrid && !mDrawGridOverPoints) {
+                drawGrid(canvas, drawingRect);
             }
         }
 
@@ -273,11 +327,27 @@ public class ChartYAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
             int part = drawingRect.height() / (mLabelsCount + 1);
             for (int i = 0; i < mLabels.size(); i++) {
                 DrawnLabel<Y> label = mLabels.get(i);
-                mLabelPaint.setAlpha((Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255))));
+                int alpha = (Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255)));
+                mLabelPaint.setAlpha(Math.min(alpha, MAX_LABEL_ALPHA));
                 float x = getLabelXCoordinate(label, drawingRect);
                 float y = drawingRect.bottom - part * i;
-                y = calculateAnimatedY(y, drawingRect);
+                y = label.value.compareTo(mZero) == 0 ? y : calculateAnimatedY(y, drawingRect);
                 canvas.drawText(label.text, x, y - mGridPadding, mLabelPaint);
+            }
+            if (mDrawGrid && mDrawGridOverPoints) {
+                drawGrid(canvas, drawingRect);
+            }
+        }
+
+        private void drawGrid(Canvas canvas, Rect drawingRect) {
+            float strokeWidth = mGridPaint.getStrokeWidth();
+            int part = drawingRect.height() / (mLabelsCount + 1);
+            for (int i = 0; i < mLabels.size(); i++) {
+                int gridAlpha = Math.min(mAlpha, (int) (mAppear ? mAnimatorProgress * 255 : (1 - mAnimatorProgress) * 255));
+                mGridPaint.setAlpha(Math.min(gridAlpha, MAX_GRID_ALPHA));
+                float y = drawingRect.bottom - part * i;
+                y = mLabels.get(i).value.compareTo(mZero) == 0 ? y : calculateAnimatedY(y, drawingRect);
+                canvas.drawLine(drawingRect.left, y - strokeWidth, drawingRect.right, y - strokeWidth, mGridPaint);
             }
         }
 

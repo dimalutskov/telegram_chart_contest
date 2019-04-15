@@ -32,6 +32,8 @@ public class ChartLinesData<X extends ChartCoordinate, Y extends ChartCoordinate
     private boolean isStacked;
     private boolean isYScaled;
 
+    private Y zeroY;
+
     public ChartLinesData(ChartPointsData<X> xPoints, List<ChartPointsData<Y>> yLines) {
         // Prevent wrong data creation
         for (ChartPointsData<Y> yPoints : yLines) {
@@ -41,6 +43,7 @@ public class ChartLinesData<X extends ChartCoordinate, Y extends ChartCoordinate
         }
         mXPoints = xPoints;
         mYPoints = yLines;
+        zeroY = (Y) yLines.get(0).getMinValue().zero();
     }
 
     public ChartPointsData<X> getXPoints() {
@@ -107,6 +110,10 @@ public class ChartLinesData<X extends ChartCoordinate, Y extends ChartCoordinate
                 }
             }
         }
+        if (minValue == null) {
+            minValue = zeroY;
+            maxValue = zeroY;
+        }
         return result.update(minValue, maxValue);
     }
 
@@ -148,6 +155,10 @@ public class ChartLinesData<X extends ChartCoordinate, Y extends ChartCoordinate
                 }
             }
 
+        }
+        if (minValue == null) {
+            minValue = zeroY;
+            maxValue = zeroY;
         }
         return result.update(minValue, maxValue);
     }

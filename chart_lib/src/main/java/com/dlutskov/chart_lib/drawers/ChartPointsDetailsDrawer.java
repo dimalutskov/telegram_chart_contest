@@ -86,7 +86,7 @@ public class ChartPointsDetailsDrawer<X extends ChartCoordinate, Y extends Chart
 
         Context ctx = chartView.getContext();
         mCornerRadius = ChartUtils.getPixelForDp(ctx, 4);
-        mTextSize = ChartUtils.getPixelForDp(ctx, 12);
+        mTextSize = ChartUtils.getPixelForDp(ctx, 11);
         mVerticalMargin = ChartUtils.getPixelForDp(ctx, 8);
         mHorizontalMargin = ChartUtils.getPixelForDp(ctx, 12);
         mVerticalPadding = ChartUtils.getPixelForDp(ctx, 6);

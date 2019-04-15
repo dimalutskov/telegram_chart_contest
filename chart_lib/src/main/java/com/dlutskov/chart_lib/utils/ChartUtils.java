@@ -9,7 +9,7 @@ import com.dlutskov.chart_lib.data.coordinates.ChartCoordinate;
 
 public class ChartUtils {
 
-    public static long DEFAULT_CHART_CHANGES_ANIMATION_DURATION = 250;
+    public static long DEFAULT_CHART_CHANGES_ANIMATION_DURATION = 200;
 
     public static int getPixelForDp(Context context, float dp) {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.getResources().getDisplayMetrics()));

@@ -12,23 +12,31 @@ import android.graphics.Color;
  */
 public class AppDesign {
 
-    private static final int COLOR_BLUE1  = Color.rgb(81, 125, 162);
     private static final int COLOR_BLUE2  = Color.rgb(56, 150, 212);
     private static final int COLOR_GRAY1  = Color.rgb(150, 162, 170);
-    private static final int COLOR_GRAY2  = Color.rgb(241, 241, 242);
-    private static final int COLOR_GRAY3  = Color.rgb(245, 248, 249);
 
-    private static final int COLOR_DARK_1 = Color.rgb(21, 30, 39);
-    private static final int COLOR_DARK_2 = Color.rgb(33, 45, 59);
-    private static final int COLOR_DARK_3 = Color.rgb(29, 39, 51);
-    private static final int COLOR_DARK_4 = Color.rgb(16, 25, 36);
+    private static final int BG_ACTIVITY_DAY = Color.parseColor("#F0F0F0");
+    private static final int BG_ACTIVITY_NIGHT = Color.parseColor("#1B2433");
 
-    private static final int COLOR_DARK_1_50 = Color.argb(130, 21, 30, 39);
-    private static final int COLOR_GRAY3_80  = Color.argb(200, 245, 248, 249);
-    private static final int COLOR_BLUE1_20   = Color.argb(100,81, 125, 162);
+    private static final int BG_CHART_DAY = Color.WHITE;
+    private static final int BG_CHART_NIGHT = Color.parseColor("#242F3E");
 
     private static final int ZOOM_OUT_TEXT_DAY = Color.parseColor("#108BE3");
     private static final int ZOOM_OUT_TEXT_NIGHT = Color.parseColor("#48AAF0");
+
+    private static final int GRID_LINE_DAY = Color.parseColor("#182D3B");
+    private static final int GRID_LINE_NIGHT = Color.WHITE;
+
+    private static final int AXIS_LABEL_1_DAY = Color.parseColor("#8E8E93");
+    private static final int AXIS_LABEL_2_DAY = Color.parseColor("#252529");
+    private static final int AXIS_LABEL_1_NIGHT = Color.parseColor("#A3B1C2"); // TODO
+    private static final int AXIS_LABEL_2_NIGHT = Color.parseColor("#ECF2F8");
+
+    private static final int PREVIEW_SCROLL_OVERLAY_DAY = Color.parseColor("#66E2EEF9");
+    private static final int PREVIEW_SCROLL_OVERLAY_NIGHT = Color.parseColor("#66304259");
+
+    private static final int PREVIEW_SCROLL_OVERLAY_BORDERS_DAY = Color.parseColor("#8086A9C4");
+    private static final int PREVIEW_SCROLL_OVERLAY_BORDERS_NIGHT = Color.parseColor("#806F899E");
 
     public enum Theme {
         DAY,
@@ -56,62 +64,51 @@ public class AppDesign {
     public static void switchTheme() {
         sTheme = sTheme.invertedTheme();
     }
-    
+
     public static int bgActivity(Theme theme) {
         switch (theme) {
-            case NIGHT: return COLOR_DARK_3;
+            case NIGHT: return BG_ACTIVITY_NIGHT;
         }
-        return Color.WHITE;
+        return BG_ACTIVITY_DAY;
     }
     
-    public static int bgHeader(Theme theme) {
+    public static int bgChart(Theme theme) {
         switch (theme) {
-            case NIGHT: return COLOR_DARK_2;
+            case NIGHT: return BG_CHART_NIGHT;
         }
-        return COLOR_BLUE1;
+        return BG_CHART_DAY;
     }
     
     public static int textColorChartLabels(Theme theme) {
-        return COLOR_GRAY1;
+        switch (theme) {
+            case NIGHT: return AXIS_LABEL_2_NIGHT;
+        }
+        return AXIS_LABEL_2_DAY;
     }
     
     public static int chartGridColor(Theme theme) {
         switch (theme) {
-            case NIGHT: return COLOR_DARK_4;
+            case NIGHT: return GRID_LINE_NIGHT;
         }
-        return COLOR_GRAY2;
-    }
-    
-    public static int bgChartPreview(Theme theme) {
-        switch (theme) {
-            case NIGHT: return COLOR_DARK_1;
-        }
-        return COLOR_GRAY3;
+        return GRID_LINE_DAY;
     }
     
     public static int bgChartPreviewUnselectedArea(Theme theme) {
         switch (theme) {
-            case NIGHT: return COLOR_DARK_1_50;
+            case NIGHT: return PREVIEW_SCROLL_OVERLAY_NIGHT;
         }
-        return COLOR_GRAY3_80;
+        return PREVIEW_SCROLL_OVERLAY_DAY;
     }
 
-    public static int bgChartPreviewSelectedArea(Theme theme) {
-        switch (theme) {
-            case NIGHT: return COLOR_DARK_3;
-        }
-        return Color.WHITE;
-    }
-    
     public static int chartPreviewBordersColor(Theme theme) {
-        return COLOR_BLUE1_20;
+        switch (theme) {
+            case NIGHT: return PREVIEW_SCROLL_OVERLAY_BORDERS_NIGHT;
+        }
+        return PREVIEW_SCROLL_OVERLAY_BORDERS_DAY;
     }
 
     public static int bgChartPointsDetails(Theme theme) {
-        switch (theme) {
-            case NIGHT: return COLOR_DARK_2;
-        }
-        return Color.WHITE;
+        return bgChart(theme);
     }
 
     public static int chartPointsDetailsXLabel(Theme theme) {

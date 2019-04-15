@@ -176,7 +176,8 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
         float y = canvas.getHeight() - mTextSize / 2;
         for (LabelCell drawnLabel : mLabelCells) {
-            mLabelPaint.setAlpha(Math.min(mAlpha, drawnLabel.alpha));
+            int alpha = Math.min(mAlpha, drawnLabel.alpha);
+            mLabelPaint.setAlpha(Math.min(alpha, MAX_LABEL_ALPHA));
             canvas.drawText(drawnLabel.text, drawnLabel.x, y, mLabelPaint);
         }
         for (AnimatedCellsHandler animatedCellsHandler : mAnimatedCellsHandlers) {
@@ -243,7 +244,8 @@ public class ChartXAxisLabelsDrawer<X extends ChartCoordinate, Y extends ChartCo
 
         void draw(Canvas canvas, float y) {
             for (LabelCell labelCell : mAnimatedCells) {
-                mLabelPaint.setAlpha(Math.min(mAlpha, labelCell.alpha));
+                int alpha = Math.min(mAlpha, labelCell.alpha);
+                mLabelPaint.setAlpha(Math.min(alpha, MAX_LABEL_ALPHA));
                 canvas.drawText(labelCell.text, labelCell.x, y, mLabelPaint);
             }
         }

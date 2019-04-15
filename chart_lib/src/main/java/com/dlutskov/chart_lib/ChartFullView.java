@@ -61,7 +61,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     private long mPointsDetailsAnimDuration;
 
     // Expanded points handling
-    private ChartPointsDetailsDrawer<X, Y> mDisappearingPointsDetailsDrawer;
     private AnimatorSet mExpandCollapseAnimator;
 
     private boolean isExpanded;
@@ -129,15 +128,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         if (mLinesData.getYPoints().size() == mHiddenChartLines.size()) {
             // Hide points details if there are no visible points
             instantlyHidePointsDetails();
-        }
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-
-        if (mDisappearingPointsDetailsDrawer != null) {
-            mDisappearingPointsDetailsDrawer.onAfterDraw(canvas, mDrawingRect);
         }
     }
 
@@ -215,6 +205,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
                        int newMinXIndex, int newMaxXIndex) {
         isExpanded = true;
 
+        instantlyHidePointsDetails();
+
         mExpandCollapseAnimator = new AnimatorSet();
 
         Animator hideAnimator = mLinesData.isPercentage()
@@ -229,7 +221,8 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         mExpandCollapseAnimator.start();
     }
 
-    public void collapse(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData, ChartBounds<X, Y> collapsedBounds) {
+    public void collapse(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData,
+                         ChartBounds<X, Y> collapsedBounds, boolean keepHiddenCharts) {
         isExpanded = false;
 
         instantlyHidePointsDetails();
@@ -243,7 +236,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         Animator showAnimator = collapsedData.isPercentage()
                 ? getCollapseShowPercentageAnimator(collapsedData, collapsedBounds, (ChartPercentagesAreasDrawer<X, Y>) pointsDrawer)
-                : getCollapseShowAnimator(pointsDrawer, collapsedData, collapsedBounds);
+                : getCollapseShowAnimator(pointsDrawer, collapsedData, collapsedBounds, keepHiddenCharts);
 
         mExpandCollapseAnimator.playTogether(hideAnimator, showAnimator);
 
@@ -253,7 +246,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     private Animator getExpandHideAnimator(int xIndex) {
         // Set current points drawer as disappearing drawer
         mDisappearingPointsDrawer = getPointsDrawer();
-        mDisappearingPointsDetailsDrawer = mPointsDetailsDrawer;
 
         // Keep references on previous data
         ChartLinesData<X, Y> collapsedData = mLinesData;
@@ -276,13 +268,11 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             int alpha = (int) (255 * (1 - progress));
 
             // Hide points details
-            mDisappearingPointsDrawer.setSelectedPointAlpha(alpha);
-            mPointsDetailsAlpha = alpha;
-            mDisappearingPointsDetailsDrawer.setAlpha(alpha);
+            // Let it disappear 2 times faster
+            mDisappearingPointsDrawer.setSelectedPointAlpha((int) (255 * (1 - Math.min(1, progress * 2))));
 
             // Hide disappearing drawer
-            // Let it disappear 2 times faster
-            mDisappearingPointsDrawer.setPointsAlpha((int) (255 * (1 - Math.min(1, progress * 2))));
+            mDisappearingPointsDrawer.setPointsAlpha(alpha);
 
             // Update horizontal bounds
             calculateCurrentBounds(collapsedData, minXIndex, maxXIndex, disappearingBounds);
@@ -294,8 +284,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             @Override
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
-                removeDrawer(mDisappearingPointsDetailsDrawer);
-                mDisappearingPointsDetailsDrawer = null;
                 mDisappearingPointsDrawer = null;
             }
         });
@@ -303,7 +291,7 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
     }
 
     private Animator getCollapseShowAnimator(ChartPointsDrawer<X, Y, ?> pointsDrawer, ChartLinesData<X, Y> collapsedData,
-                                             ChartBounds<X, Y> collapsedBounds) {
+                                             ChartBounds<X, Y> collapsedBounds, boolean keepHiddenCharts) {
         // Keep references on previous data
         int xPosition = (collapsedBounds.getMaxXIndex() - collapsedBounds.getMinXIndex()) / 2;
         Pair<Y, Y> yBounds = new Pair<>(null, null);
@@ -316,20 +304,26 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         int minRequiredIndex = collapsedBounds.getMinXIndex();
         int maxRequiredIndex = collapsedBounds.getMaxXIndex();
 
+        boolean[] isStarted = new boolean[1];
+        isStarted[0] = false;
+
         ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f).setDuration(mDataAppearAnimationDuration);
         animator.setInterpolator(new AccelerateInterpolator());
         animator.addUpdateListener(animation -> {
+            // HOTFIX For some devices onUpdate called before onStart
+            if (!isStarted[0]) return;
+
             float progress = (float) animation.getAnimatedValue();
 
             int minXIndex = (int) (initialBounds.getMinXIndex() + (minRequiredIndex - initialBounds.getMinXIndex()) * progress);
             int maxXIndex = (int) (initialBounds.getMaxXIndex() - (initialBounds.getMaxXIndex() - maxRequiredIndex) * progress);
 
             // Hide disappearing drawer
-            mPointsDrawer.setPointsAlpha((int) (255 * progress));
+            pointsDrawer.setPointsAlpha((int) (255 * progress));
 
             // Update horizontal bounds
             calculateCurrentBounds(collapsedData, minXIndex, maxXIndex, appearingBounds);
-            mPointsDrawer.updateBounds(prevAppearingBounds, appearingBounds);
+            pointsDrawer.updateBounds(prevAppearingBounds, appearingBounds);
             prevAppearingBounds.update(appearingBounds);
             invalidate();
         });
@@ -337,12 +331,12 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             @Override
             public void onAnimationStart(Animator animation) {
                 super.onAnimationStart(animation);
+                isStarted[0] = true;
                 // Replace current points drawer to new one
                 setPointsDrawer(pointsDrawer);
-                updateChartData(collapsedData, collapsedBounds.getMinXIndex(), collapsedBounds.getMaxXIndex(), true);
+                updateChartData(collapsedData, collapsedBounds.getMinXIndex(), collapsedBounds.getMaxXIndex(), keepHiddenCharts);
                 pointsDrawer.setAnimateBoundsChanges(false);
             }
-
             @Override
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
@@ -379,7 +373,6 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
 
         // Set current points drawer as disappearing drawer
         mDisappearingPointsDrawer = getPointsDrawer();
-        mDisappearingPointsDetailsDrawer = mPointsDetailsDrawer;
         ChartPercentagesAreasDrawer<X, Y> disappearingPointsDrawer = (ChartPercentagesAreasDrawer<X, Y>) mDisappearingPointsDrawer;
 
         // Transform drawer to circle
@@ -391,20 +384,10 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
             int alpha = (int) (255 * (1 - progress));
             // Hide points details
             mDisappearingPointsDrawer.setSelectedPointAlpha(alpha);
-            mPointsDetailsAlpha = alpha;
-            mDisappearingPointsDetailsDrawer.setAlpha(alpha);
             // Hide y labels
             mYAxisLabelsDrawer.setAlpha(alpha);
             mXAxisLabelsDrawer.setAlpha(alpha);
             invalidate();
-        });
-        clipAnimator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                super.onAnimationEnd(animation);
-                removeDrawer(mDisappearingPointsDetailsDrawer);
-                mDisappearingPointsDetailsDrawer = null;
-            }
         });
         clipAnimator.setInterpolator(new AccelerateInterpolator());
 
@@ -547,6 +530,11 @@ public class ChartFullView<X extends ChartCoordinate, Y extends ChartCoordinate>
         removeDrawer(mYAxisLabelsDrawer);
         mYAxisLabelsDrawer = yLabelsDrawer;
         addDrawer(mYAxisLabelsDrawer);
+
+        // Hotfix
+        removeDrawer(mPointsDetailsDrawer);
+        addDrawer(mPointsDetailsDrawer);
+
         invalidate();
     }
 
